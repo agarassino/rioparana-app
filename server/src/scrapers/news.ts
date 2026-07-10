@@ -46,6 +46,7 @@ export function parseNews(html: string): NewsItem[] {
 export async function fetchNews(fetchFn: typeof fetch = fetch): Promise<NewsItem[]> {
   const res = await fetchFn(NEWS_URL, {
     headers: { Accept: 'text/html', 'User-Agent': 'ParanaInfo-Server/1.0' },
+    signal: AbortSignal.timeout(10000),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return parseNews(await res.text());

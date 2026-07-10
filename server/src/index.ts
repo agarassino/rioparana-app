@@ -7,14 +7,14 @@ async function main() {
   const env = loadEnv();
   const pool = createPool(env.databaseUrl);
   await runMigrations(pool);
-
-  // Warm the caches once at boot so the API has data immediately.
-  await Promise.allSettled([refreshRiver(pool), refreshNews(pool)]);
-  startCron(pool);
-
   const app = await buildServer({ pool, apiKey: env.apiKey, rateLimit: true });
   await app.listen({ port: env.port, host: '0.0.0.0' });
   console.log(`[server] listening on ${env.port}`);
+  // warm caches in the background so a slow origin can't block boot / healthcheck
+  Promise.allSettled([refreshRiver(pool), refreshNews(pool)])
+    .then(() => console.log('[server] initial cache warm complete'))
+    .catch((e) => console.error('[server] cache warm error', e));
+  startCron(pool);
 }
 
 main().catch((err) => {

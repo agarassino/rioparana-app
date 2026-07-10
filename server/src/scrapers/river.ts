@@ -22,7 +22,7 @@ export function parseWaterLevel(html: string, stationId: string): WaterLevel | n
   if (dates.length === 0 || levels.length === 0) return null;
 
   const currentLevel = levels[0];
-  const timestamp = new Date(`${dates[0].date}T${dates[0].time}:00`).toISOString();
+  const timestamp = new Date(`${dates[0].date}T${dates[0].time}:00-03:00`).toISOString();
 
   let trend: Trend = 'stable';
   let changeRate = 0;
@@ -42,6 +42,7 @@ export async function fetchWaterLevel(
 ): Promise<WaterLevel | null> {
   const res = await fetchFn(buildRiverUrl(station.code), {
     headers: { Accept: 'text/html', 'User-Agent': 'ParanaInfo-Server/1.0' },
+    signal: AbortSignal.timeout(10000),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const html = await res.text();

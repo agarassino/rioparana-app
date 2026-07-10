@@ -95,6 +95,7 @@ describe('fetchWaterLevel', () => {
           Accept: 'text/html',
           'User-Agent': 'ParanaInfo-Server/1.0',
         },
+        signal: expect.any(AbortSignal),
       }
     );
   });
