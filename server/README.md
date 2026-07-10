@@ -10,14 +10,25 @@ Backend for the Río Paraná app. Fastify + Postgres.
 ## Tests
 `npm test`
 
-## Deploy to Railway
-1. Create a new Railway project; add a **PostgreSQL** plugin.
-2. Add a service from this repo; set **Root Directory** to `server`.
-3. Set env vars:
-   - `DATABASE_URL` — reference the Postgres plugin's connection string.
-   - `APP_API_KEY` — a long random string (the app must send it as `x-api-key`).
-   - `PORT` — Railway provides this automatically; the app reads it.
-4. Deploy. Railway runs `npm run build` then `npm start`; migrations run on boot.
-5. Verify: `GET https://<service>.up.railway.app/health` → `{"status":"ok"}`.
-6. Smoke test a protected route with the key:
-   `curl -H "x-api-key: <APP_API_KEY>" https://<service>.up.railway.app/news`
+## Deploy to Render
+This repo ships a `render.yaml` Blueprint that provisions everything in one shot:
+- a **web service** (`rioparana-api`) running the Fastify API,
+- a **cron job** (`rioparana-refresh`) that scrapes river/news data every 15 minutes via `npm run refresh`,
+- a **free Postgres** database (`rioparana-db`).
+
+### Steps
+1. In the Render dashboard: **New → Blueprint**, point it at this repo. Render reads `server/render.yaml`.
+2. Render provisions the database, web service, and cron job automatically. `DATABASE_URL` is wired between them via `fromDatabase`.
+3. Set `APP_API_KEY` manually on the web service (Render marks it `sync: false`, so it won't be auto-generated) — use a long random string. The mobile app must send the same value as the `x-api-key` header.
+4. Deploy. The web service runs `npm ci && npm run build` then `npm start`; migrations run on boot. The cron job runs the same build, then `npm run refresh` on its schedule.
+
+### Caveats
+- **Free web service sleeps** after ~15 minutes of inactivity — the API cold-starts on the next request. This is fine here because the separate cron job keeps the database fresh independent of whether the API is awake.
+- **Cron jobs are not free** — Render bills per execution, and may require a workspace with a payment method attached even on low usage.
+- **Free Postgres expires after ~30 days.** Plan to upgrade the database plan (or recreate it) before then to avoid data loss.
+
+### Verify
+```
+curl https://<service>.onrender.com/health
+curl -H "x-api-key: <APP_API_KEY>" https://<service>.onrender.com/news
+```

@@ -9,7 +9,11 @@ const here = dirname(fileURLToPath(import.meta.url));
 export const SCHEMA_SQL = readFileSync(join(here, 'schema.sql'), 'utf8');
 
 export function createPool(databaseUrl: string): pg.Pool {
-  return new Pool({ connectionString: databaseUrl });
+  const needsSsl = process.env.PGSSL === 'require' || /\.render\.com/.test(databaseUrl);
+  return new Pool({
+    connectionString: databaseUrl,
+    ssl: needsSsl ? { rejectUnauthorized: false } : undefined,
+  });
 }
 
 export async function runMigrations(pool: pg.Pool): Promise<void> {

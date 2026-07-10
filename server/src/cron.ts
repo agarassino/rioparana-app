@@ -1,4 +1,3 @@
-import cron from 'node-cron';
 import type { Pool } from 'pg';
 import { STATIONS } from './config/stations.js';
 import { fetchWaterLevel } from './scrapers/river.js';
@@ -33,11 +32,4 @@ export async function refreshNews(pool: Pool, deps: { fetchFn?: typeof fetch } =
     console.error('[cron] news failed:', (err as Error).message);
   }
   return { updated: 0 };
-}
-
-export function startCron(pool: Pool): void {
-  cron.schedule('*/15 * * * *', () => {
-    refreshRiver(pool).catch((e) => console.error('[cron] river run error', e));
-    refreshNews(pool).catch((e) => console.error('[cron] news run error', e));
-  });
 }
