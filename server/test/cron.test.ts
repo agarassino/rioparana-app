@@ -4,6 +4,7 @@ import { runMigrations } from '../src/db/index.js';
 import { getWaterLevel } from '../src/stores/riverStore.js';
 import { getNews } from '../src/stores/newsStore.js';
 import { refreshRiver, refreshNews } from '../src/cron.js';
+import { STATIONS } from '../src/config/stations.js';
 import type { Pool } from 'pg';
 
 let pool: Pool;
@@ -29,6 +30,23 @@ describe('refreshRiver', () => {
     const fetchFn = vi.fn(async () => new Response('err', { status: 500 }));
     const r = await refreshRiver(pool, { fetchFn: fetchFn as any });
     expect(r.updated).toBe(0);
+  });
+
+  it('continues processing other stations when one fails', async () => {
+    // fetchFn that fails for corrientes (code='130') but succeeds for all others
+    const fetchFn = vi.fn(async (url: string) => {
+      if (url.includes('id=130')) {
+        return new Response('err', { status: 500 });
+      }
+      return new Response(riverHtml, { status: 200 });
+    });
+    const r = await refreshRiver(pool, { fetchFn: fetchFn as any });
+    // Should have updated all stations except corrientes (1 failure out of 10)
+    expect(r.updated).toBe(STATIONS.length - 1);
+    // Verify corrientes was not stored
+    expect(await getWaterLevel(pool, 'corrientes')).toBeNull();
+    // Verify parana (code='230') was successfully stored
+    expect(await getWaterLevel(pool, 'parana')).not.toBeNull();
   });
 });
 
