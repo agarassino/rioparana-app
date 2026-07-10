@@ -1,8 +1,16 @@
 # Railway Backend Migration + Anonymous Device Analytics — Design
 
 **Date:** 2026-07-10
-**Status:** Approved (design), pending implementation plan
+**Status:** Implemented and merged to `main`. Host changed to **Render** after implementation.
 **Project:** rioparana-app (Expo / React Native, TypeScript)
+
+> **Update (post-implementation):** Deployment target switched from Railway to **Render**.
+> Because Render free web services sleep after ~15 min of inactivity (which would stop an
+> in-process `node-cron`), the topology changed from "single service + in-process cron" to
+> **two services**: a web service (the API) and a separate **Render Cron Job** (`npm run refresh`
+> → `src/refresh-once.ts`) that scrapes every 15 min. `node-cron` was removed. `createPool` now
+> enables SSL for Render Postgres. Config lives in `server/render.yaml`; see `server/README.md`.
+> Caveats: Render cron jobs are a paid plan (no free tier); free Postgres expires ~30 days.
 
 ## Problem & Motivation
 
