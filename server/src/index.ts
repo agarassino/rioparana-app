@@ -1,7 +1,7 @@
 import { loadEnv } from './config/env.js';
 import { createPool, runMigrations } from './db/index.js';
 import { buildServer } from './server.js';
-import { startCron, refreshRiver, refreshNews } from './cron.js';
+import { refreshRiver, refreshNews } from './cron.js';
 
 async function main() {
   const env = loadEnv();
@@ -14,7 +14,6 @@ async function main() {
   Promise.allSettled([refreshRiver(pool), refreshNews(pool)])
     .then(() => console.log('[server] initial cache warm complete'))
     .catch((e) => console.error('[server] cache warm error', e));
-  startCron(pool);
 }
 
 main().catch((err) => {
