@@ -21,7 +21,7 @@ beforeEach(async () => {
   await runMigrations(pool);
 });
 
-function app() {
+async function app() {
   const fetchFn = vi.fn(async () => new Response(JSON.stringify(OM), { status: 200 }));
   return buildServer({ pool, apiKey: KEY, weatherDeps: { fetchFn: fetchFn as any } });
 }
@@ -29,7 +29,7 @@ function app() {
 describe('routes', () => {
   it('GET /river/:id returns stored level', async () => {
     await upsertWaterLevel(pool, { stationId: 'parana', level: 2.77, trend: 'rising', changeRate: 27, timestamp: '2026-01-16T00:00:00.000Z' });
-    const a = app();
+    const a = await app();
     const res = await a.inject({ method: 'GET', url: '/river/parana', headers: H });
     expect(res.statusCode).toBe(200);
     expect(res.json().level).toBe(2.77);
@@ -37,7 +37,7 @@ describe('routes', () => {
   });
 
   it('GET /river/:id returns 404 for unknown station id', async () => {
-    const a = app();
+    const a = await app();
     const res = await a.inject({ method: 'GET', url: '/river/nope', headers: H });
     expect(res.statusCode).toBe(404);
     await a.close();
@@ -45,28 +45,28 @@ describe('routes', () => {
 
   it('GET /news returns list', async () => {
     await replaceNews(pool, [{ id: '/noticias/a', title: 'A', date: 'd', url: 'https://x/a' }]);
-    const a = app();
+    const a = await app();
     const res = await a.inject({ method: 'GET', url: '/news', headers: H });
     expect(res.json()).toHaveLength(1);
     await a.close();
   });
 
   it('GET /weather returns weather', async () => {
-    const a = app();
+    const a = await app();
     const res = await a.inject({ method: 'GET', url: '/weather?lat=-31.7&lon=-60.5', headers: H });
     expect(res.json().current.temperature).toBe(16);
     await a.close();
   });
 
   it('GET /weather rejects invalid coords', async () => {
-    const a = app();
+    const a = await app();
     const res = await a.inject({ method: 'GET', url: '/weather?lat=abc&lon=-60.5', headers: H });
     expect(res.statusCode).toBe(400);
     await a.close();
   });
 
   it('POST /devices/ping records device', async () => {
-    const a = app();
+    const a = await app();
     const res = await a.inject({
       method: 'POST', url: '/devices/ping', headers: H,
       payload: { deviceId: '11111111-1111-1111-1111-111111111111', stationId: 'parana' },
@@ -78,14 +78,14 @@ describe('routes', () => {
   });
 
   it('rejects requests without api key', async () => {
-    const a = app();
+    const a = await app();
     const res = await a.inject({ method: 'GET', url: '/news' });
     expect(res.statusCode).toBe(401);
     await a.close();
   });
 
   it('GET /river/:id returns 404 for known station with no data', async () => {
-    const a = app();
+    const a = await app();
     const res = await a.inject({ method: 'GET', url: '/river/rosario', headers: H });
     expect(res.statusCode).toBe(404);
     expect(res.json().error).toBe('no data yet');
@@ -93,7 +93,7 @@ describe('routes', () => {
   });
 
   it('POST /devices/ping rejects invalid deviceId', async () => {
-    const a = app();
+    const a = await app();
     const res = await a.inject({
       method: 'POST', url: '/devices/ping', headers: H,
       payload: { deviceId: 'not-a-uuid', stationId: 'parana' },
@@ -104,7 +104,7 @@ describe('routes', () => {
   });
 
   it('GET /weather rejects missing coords', async () => {
-    const a = app();
+    const a = await app();
     const res = await a.inject({ method: 'GET', url: '/weather?lat=-31.7', headers: H });
     expect(res.statusCode).toBe(400);
     await a.close();
