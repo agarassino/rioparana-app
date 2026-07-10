@@ -83,4 +83,30 @@ describe('routes', () => {
     expect(res.statusCode).toBe(401);
     await a.close();
   });
+
+  it('GET /river/:id returns 404 for known station with no data', async () => {
+    const a = app();
+    const res = await a.inject({ method: 'GET', url: '/river/rosario', headers: H });
+    expect(res.statusCode).toBe(404);
+    expect(res.json().error).toBe('no data yet');
+    await a.close();
+  });
+
+  it('POST /devices/ping rejects invalid deviceId', async () => {
+    const a = app();
+    const res = await a.inject({
+      method: 'POST', url: '/devices/ping', headers: H,
+      payload: { deviceId: 'not-a-uuid', stationId: 'parana' },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toBe('invalid body');
+    await a.close();
+  });
+
+  it('GET /weather rejects missing coords', async () => {
+    const a = app();
+    const res = await a.inject({ method: 'GET', url: '/weather?lat=-31.7', headers: H });
+    expect(res.statusCode).toBe(400);
+    await a.close();
+  });
 });
