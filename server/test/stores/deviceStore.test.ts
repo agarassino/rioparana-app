@@ -20,6 +20,10 @@ describe('pingDevice', () => {
     const res = await pool.query('SELECT first_seen, last_seen FROM devices WHERE device_id=$1', [DEV]);
     expect(new Date(res.rows[0].first_seen).toISOString()).toBe('2026-01-01T00:00:00.000Z');
     expect(new Date(res.rows[0].last_seen).toISOString()).toBe('2026-01-02T00:00:00.000Z');
+
+    // Assert no station view row created when stationId is absent
+    const viewRes = await pool.query('SELECT count(*) AS count FROM device_station_views WHERE device_id=$1', [DEV]);
+    expect(Number(viewRes.rows[0].count)).toBe(0);
   });
 
   it('increments station view count across pings', async () => {
