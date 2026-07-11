@@ -10,6 +10,11 @@ Backend for the Río Paraná app. Fastify + Postgres.
 ## Tests
 `npm test`
 
+## Deploy
+
+Coolify (self-hosted on Hetzner) is an alternative/preferred option — see
+[`DEPLOY-COOLIFY.md`](./DEPLOY-COOLIFY.md).
+
 ## Deploy to Render
 This repo ships a `render.yaml` Blueprint that provisions everything in one shot:
 - a **web service** (`rioparana-api`) running the Fastify API,
