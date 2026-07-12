@@ -37,3 +37,22 @@ This repo ships a `render.yaml` Blueprint that provisions everything in one shot
 curl https://<service>.onrender.com/health
 curl -H "x-api-key: <APP_API_KEY>" https://<service>.onrender.com/news
 ```
+
+## Free-tier refresh via GitHub Actions
+
+If you deploy only the **web service** on Render's free tier (skipping the paid cron job), data
+refresh and keep-awake are instead handled by the GitHub Actions workflow
+[`.github/workflows/refresh.yml`](../.github/workflows/refresh.yml) at the repo root. It runs on a
+`*/15 * * * *` schedule (best-effort timing on GitHub's side) and does a single `POST /refresh`,
+which scrapes river + news data and stores it — the same work the Render cron job would do — while
+also waking/keeping the web service alive.
+
+After deploying, set these two repo secrets (Settings → Secrets and variables → Actions):
+- `API_BASE_URL` — the Render service URL, e.g. `https://rioparana-api.onrender.com`
+- `APP_API_KEY` — the same key configured as `APP_API_KEY` on the Render service
+
+You can trigger it manually from the Actions tab (`workflow_dispatch`) to verify it works before
+waiting for the schedule.
+
+This can be swapped for any external scheduler (e.g. [cron-job.org](https://cron-job.org)) hitting
+`POST /refresh` with the `x-api-key` header — the workflow is just one option.

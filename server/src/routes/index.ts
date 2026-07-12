@@ -6,10 +6,12 @@ import { getNews } from '../stores/newsStore.js';
 import { pingDevice } from '../stores/deviceStore.js';
 import { getWeather } from '../services/weatherService.js';
 import { getStationById } from '../config/stations.js';
+import { refreshRiver, refreshNews } from '../cron.js';
 
 export interface RouteDeps {
   pool: Pool;
   weatherDeps?: { fetchFn?: typeof fetch };
+  refreshFetch?: typeof fetch;
 }
 
 const weatherQuery = z.object({ lat: z.coerce.number(), lon: z.coerce.number() });
@@ -39,5 +41,13 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     if (!parsed.success) return reply.code(400).send({ error: 'invalid body' });
     await pingDevice(pool, parsed.data.deviceId, parsed.data.stationId);
     return reply.code(204).send();
+  });
+
+  app.post('/refresh', async () => {
+    const [river, news] = await Promise.all([
+      refreshRiver(pool, { fetchFn: deps.refreshFetch }),
+      refreshNews(pool, { fetchFn: deps.refreshFetch }),
+    ]);
+    return { river, news };
   });
 }

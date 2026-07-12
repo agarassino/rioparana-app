@@ -21,9 +21,14 @@ beforeEach(async () => {
   await runMigrations(pool);
 });
 
-async function app() {
+async function app(opts: { refreshFetch?: typeof fetch } = {}) {
   const fetchFn = vi.fn(async () => new Response(JSON.stringify(OM), { status: 200 }));
-  return buildServer({ pool, apiKey: KEY, weatherDeps: { fetchFn: fetchFn as any } });
+  return buildServer({
+    pool,
+    apiKey: KEY,
+    weatherDeps: { fetchFn: fetchFn as any },
+    refreshFetch: opts.refreshFetch,
+  });
 }
 
 describe('routes', () => {
@@ -107,6 +112,30 @@ describe('routes', () => {
     const a = await app();
     const res = await a.inject({ method: 'GET', url: '/weather?lat=-31.7', headers: H });
     expect(res.statusCode).toBe(400);
+    await a.close();
+  });
+
+  it('POST /refresh rejects requests without api key', async () => {
+    const a = await app();
+    const res = await a.inject({ method: 'POST', url: '/refresh' });
+    expect(res.statusCode).toBe(401);
+    await a.close();
+  });
+
+  it('POST /refresh scrapes river and news via injected fetch and stores them', async () => {
+    const riverHtml = '<td><i></i> 2026-01-16 <i></i> 00:00</td><td>2.77 Mts</td>';
+    const newsHtml = '<a href="/noticias/x" class="panel"><time>d</time><h3>T</h3></a>';
+    const refreshFetch = vi.fn(async (url: string | URL | Request) => {
+      const u = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url;
+      if (u.includes('/alturas')) return new Response(riverHtml, { status: 200 });
+      if (u.includes('/noticias-pna')) return new Response(newsHtml, { status: 200 });
+      return new Response('', { status: 404 });
+    });
+    const a = await app({ refreshFetch: refreshFetch as any });
+    const res = await a.inject({ method: 'POST', url: '/refresh', headers: H });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().river.updated).toBeGreaterThan(0);
+    expect(res.json().news.updated).toBeGreaterThan(0);
     await a.close();
   });
 });

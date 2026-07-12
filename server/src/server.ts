@@ -8,6 +8,7 @@ export interface BuildServerOptions {
   pool?: Pool;
   apiKey?: string;
   weatherDeps?: { fetchFn?: typeof fetch };
+  refreshFetch?: typeof fetch;
   rateLimit?: boolean;
 }
 
@@ -20,7 +21,8 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<Fastif
 
   app.get('/health', async () => ({ status: 'ok' }));
   if (opts.apiKey) app.addHook('preHandler', apiKeyGuard(opts.apiKey));
-  if (opts.pool) registerRoutes(app, { pool: opts.pool, weatherDeps: opts.weatherDeps });
+  if (opts.pool)
+    registerRoutes(app, { pool: opts.pool, weatherDeps: opts.weatherDeps, refreshFetch: opts.refreshFetch });
 
   return app;
 }
