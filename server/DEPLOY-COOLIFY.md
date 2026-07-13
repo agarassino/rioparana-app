@@ -81,3 +81,24 @@ curl -i https://<domain>/news
 Enable Coolify's scheduled Postgres backups and point them at a Hetzner
 Storage Box or S3-compatible bucket. Don't skip this — there is no
 managed-backup safety net like a cloud provider would give you by default.
+
+## Known issue: river (PNA) data from a datacenter IP
+
+The Prefectura Naval Argentina source (`contenidosweb.prefecturanaval.gob.ar`)
+appears to restrict access from non-Argentine / datacenter IPs. Confirmed on
+Render: news (argentina.gob.ar) and weather (Open-Meteo) scrape fine from the
+datacenter, but **river-level requests to PNA return no usable data**
+(`/river/:id` → `no data yet`, `/refresh` → `river.updated: 0`). PNA responds
+normally from an Argentine residential IP, which is how the original mobile app
+(scraping from users' phones) always worked.
+
+**Hetzner will NOT fix this** — it is also a datacenter (EU/US IPs, no Argentine
+region). Expect the same river gap on any cloud host. This is orthogonal to the
+deploy platform and must be solved separately. Options under consideration:
+- Route only the PNA fetches through a proxy with an Argentine IP.
+- Keep river-level fetching on the client (as the original app did) and use the
+  backend for news + weather + device analytics + shared cache.
+- Run a small scraper from an Argentine-based machine that POSTs to `/refresh`.
+
+Until this is resolved, a datacenter deploy serves working news + weather +
+device analytics, but river level will be empty.
