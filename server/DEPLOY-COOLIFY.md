@@ -6,18 +6,26 @@ free-tier limitations (sleeping service, paid cron, 30-day DB expiry).
 
 ## 1. Provision the server
 
-Create a Hetzner **CAX21** (ARM64, 4 vCPU / 8 GB RAM) with Ubuntu 22.04 or
-24.04. Coolify supports ARM64 natively.
+Create a Hetzner **CX33** (x86, 4 vCPU / 8 GB RAM) with Ubuntu 24.04. (An ARM
+**CAX21** is equivalent and cheaper when in stock — the Docker image is
+multi-arch, so either works. CX is the fallback when Ampere/CAX is sold out.)
+
+## 1b. Harden the box FIRST
+
+Before installing anything public-facing, run the baseline hardening and set up
+Tailscale — see **[HARDENING.md](HARDENING.md)**. In particular, Coolify's
+dashboard must be reached over Tailscale, never exposed publicly.
 
 ## 2. Install Coolify
 
-SSH in as root on a fresh(ish) server and run:
+SSH in (over Tailscale, as the `deploy` user after hardening) and run:
 
 ```
 curl -fsSL https://cdn.coollabs.io/coolify/install.sh | bash
 ```
 
-Once it finishes, open `http://<server-ip>:8000`, create the admin user.
+Once it finishes, open the dashboard over Tailscale at
+`http://<tailscale-ip>:8000` (NOT the public IP) and create the admin user.
 
 ## 3. Create the project and database
 
