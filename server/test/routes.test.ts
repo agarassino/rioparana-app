@@ -162,6 +162,17 @@ describe('routes', () => {
     await a.close();
   });
 
+  it('POST /refresh rejects missing refresh token header', async () => {
+    const a = await app({ refreshToken: 'testtoken' });
+    const res = await a.inject({
+      method: 'POST',
+      url: '/refresh',
+      headers: H,
+    });
+    expect(res.statusCode).toBe(401);
+    await a.close();
+  });
+
   it('POST /refresh is disabled (404) when no refresh token is configured', async () => {
     const a = await app();
     const res = await a.inject({ method: 'POST', url: '/refresh', headers: H });

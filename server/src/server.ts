@@ -14,7 +14,7 @@ export interface BuildServerOptions {
 }
 
 export async function buildServer(opts: BuildServerOptions = {}): Promise<FastifyInstance> {
-  const app = Fastify({ logger: false, trustProxy: true });
+  const app = Fastify({ logger: false, trustProxy: 1 });
 
   if (opts.rateLimit) {
     await app.register(rateLimit, { max: 120, timeWindow: '1 minute' });
