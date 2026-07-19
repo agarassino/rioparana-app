@@ -47,9 +47,10 @@ refresh and keep-awake are instead handled by the GitHub Actions workflow
 which scrapes river + news data and stores it — the same work the Render cron job would do — while
 also waking/keeping the web service alive.
 
-After deploying, set these two repo secrets (Settings → Secrets and variables → Actions):
+After deploying, set these repo secrets (Settings → Secrets and variables → Actions):
 - `API_BASE_URL` — the Render service URL, e.g. `https://rioparana-api.onrender.com`
 - `APP_API_KEY` — the same key configured as `APP_API_KEY` on the Render service
+- `REFRESH_TOKEN` — the same value configured as `REFRESH_TOKEN` on the server; `POST /refresh` requires this in the `x-refresh-token` header and returns 404 (disabled) if the server has no `REFRESH_TOKEN` set. This keeps the mobile-app-shipped `x-api-key` from being able to trigger refreshes on its own.
 
 You can trigger it manually from the Actions tab (`workflow_dispatch`) to verify it works before
 waiting for the schedule.
