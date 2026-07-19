@@ -21,13 +21,14 @@ beforeEach(async () => {
   await runMigrations(pool);
 });
 
-async function app(opts: { refreshFetch?: typeof fetch } = {}) {
+async function app(opts: { refreshFetch?: typeof fetch; refreshToken?: string } = {}) {
   const fetchFn = vi.fn(async () => new Response(JSON.stringify(OM), { status: 200 }));
   return buildServer({
     pool,
     apiKey: KEY,
     weatherDeps: { fetchFn: fetchFn as any },
     refreshFetch: opts.refreshFetch,
+    refreshToken: opts.refreshToken,
   });
 }
 
@@ -115,8 +116,15 @@ describe('routes', () => {
     await a.close();
   });
 
-  it('POST /refresh rejects requests without api key', async () => {
+  it('GET /weather rejects out-of-range coords', async () => {
     const a = await app();
+    const res = await a.inject({ method: 'GET', url: '/weather?lat=200&lon=-60.5', headers: H });
+    expect(res.statusCode).toBe(400);
+    await a.close();
+  });
+
+  it('POST /refresh rejects requests without api key', async () => {
+    const a = await app({ refreshToken: 'testtoken' });
     const res = await a.inject({ method: 'POST', url: '/refresh' });
     expect(res.statusCode).toBe(401);
     await a.close();
@@ -131,11 +139,33 @@ describe('routes', () => {
       if (u.includes('/noticias-pna')) return new Response(newsHtml, { status: 200 });
       return new Response('', { status: 404 });
     });
-    const a = await app({ refreshFetch: refreshFetch as any });
-    const res = await a.inject({ method: 'POST', url: '/refresh', headers: H });
+    const a = await app({ refreshFetch: refreshFetch as any, refreshToken: 'testtoken' });
+    const res = await a.inject({
+      method: 'POST',
+      url: '/refresh',
+      headers: { ...H, 'x-refresh-token': 'testtoken' },
+    });
     expect(res.statusCode).toBe(200);
     expect(res.json().river.updated).toBeGreaterThan(0);
     expect(res.json().news.updated).toBeGreaterThan(0);
+    await a.close();
+  });
+
+  it('POST /refresh rejects a wrong refresh token', async () => {
+    const a = await app({ refreshToken: 'testtoken' });
+    const res = await a.inject({
+      method: 'POST',
+      url: '/refresh',
+      headers: { ...H, 'x-refresh-token': 'wrong' },
+    });
+    expect(res.statusCode).toBe(401);
+    await a.close();
+  });
+
+  it('POST /refresh is disabled (404) when no refresh token is configured', async () => {
+    const a = await app();
+    const res = await a.inject({ method: 'POST', url: '/refresh', headers: H });
+    expect(res.statusCode).toBe(404);
     await a.close();
   });
 });

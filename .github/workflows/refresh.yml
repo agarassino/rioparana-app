@@ -11,6 +11,7 @@ jobs:
         run: |
           code=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
             -H "x-api-key: ${{ secrets.APP_API_KEY }}" \
+            -H "x-refresh-token: ${{ secrets.REFRESH_TOKEN }}" \
             "${{ secrets.API_BASE_URL }}/refresh")
           echo "refresh HTTP $code"
           test "$code" = "200"

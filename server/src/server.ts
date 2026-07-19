@@ -9,11 +9,12 @@ export interface BuildServerOptions {
   apiKey?: string;
   weatherDeps?: { fetchFn?: typeof fetch };
   refreshFetch?: typeof fetch;
+  refreshToken?: string;
   rateLimit?: boolean;
 }
 
 export async function buildServer(opts: BuildServerOptions = {}): Promise<FastifyInstance> {
-  const app = Fastify({ logger: false });
+  const app = Fastify({ logger: false, trustProxy: true });
 
   if (opts.rateLimit) {
     await app.register(rateLimit, { max: 120, timeWindow: '1 minute' });
@@ -22,7 +23,12 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<Fastif
   app.get('/health', async () => ({ status: 'ok' }));
   if (opts.apiKey) app.addHook('preHandler', apiKeyGuard(opts.apiKey));
   if (opts.pool)
-    registerRoutes(app, { pool: opts.pool, weatherDeps: opts.weatherDeps, refreshFetch: opts.refreshFetch });
+    registerRoutes(app, {
+      pool: opts.pool,
+      weatherDeps: opts.weatherDeps,
+      refreshFetch: opts.refreshFetch,
+      refreshToken: opts.refreshToken,
+    });
 
   return app;
 }

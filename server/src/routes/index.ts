@@ -7,14 +7,19 @@ import { pingDevice } from '../stores/deviceStore.js';
 import { getWeather } from '../services/weatherService.js';
 import { getStationById } from '../config/stations.js';
 import { refreshRiver, refreshNews } from '../cron.js';
+import { safeEqual } from '../middleware/apiKey.js';
 
 export interface RouteDeps {
   pool: Pool;
   weatherDeps?: { fetchFn?: typeof fetch };
   refreshFetch?: typeof fetch;
+  refreshToken?: string;
 }
 
-const weatherQuery = z.object({ lat: z.coerce.number(), lon: z.coerce.number() });
+const weatherQuery = z.object({
+  lat: z.coerce.number().finite().min(-90).max(90),
+  lon: z.coerce.number().finite().min(-180).max(180),
+});
 const pingBody = z.object({ deviceId: z.string().uuid(), stationId: z.string().optional() });
 
 export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
@@ -43,7 +48,15 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     return reply.code(204).send();
   });
 
-  app.post('/refresh', async () => {
+  app.post('/refresh', async (req, reply) => {
+    if (!deps.refreshToken) return reply.code(404).send({ error: 'not found' });
+
+    const provided = req.headers['x-refresh-token'];
+    const token = Array.isArray(provided) ? provided[0] : provided;
+    if (!token || !safeEqual(token, deps.refreshToken)) {
+      return reply.code(401).send({ error: 'unauthorized' });
+    }
+
     const [river, news] = await Promise.all([
       refreshRiver(pool, { fetchFn: deps.refreshFetch }),
       refreshNews(pool, { fetchFn: deps.refreshFetch }),
