@@ -8,5 +8,8 @@ COPY leaflet.markercluster.js /usr/share/nginx/html/leaflet.markercluster.js
 COPY MarkerCluster.css /usr/share/nginx/html/MarkerCluster.css
 COPY MarkerCluster.Default.css /usr/share/nginx/html/MarkerCluster.Default.css
 COPY parana-map.geojson /usr/share/nginx/html/parana-map.geojson
+COPY analytics.js /usr/share/nginx/html/analytics.js
+COPY sitemap.xml /usr/share/nginx/html/sitemap.xml
+COPY robots.txt /usr/share/nginx/html/robots.txt
 COPY guias /usr/share/nginx/html/guias
 EXPOSE 80
