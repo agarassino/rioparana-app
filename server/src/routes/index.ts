@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import type { Pool } from 'pg';
 import { z } from 'zod';
-import { getWaterLevel } from '../stores/riverStore.js';
+import { getWaterLevel, upsertWaterLevel } from '../stores/riverStore.js';
 import { getNews } from '../stores/newsStore.js';
 import { pingDevice } from '../stores/deviceStore.js';
 import { getWeather } from '../services/weatherService.js';
@@ -21,6 +21,12 @@ const weatherQuery = z.object({
   lon: z.coerce.number().finite().min(-180).max(180),
 });
 const pingBody = z.object({ deviceId: z.string().uuid(), stationId: z.string().optional() });
+const riverIngestBody = z.object({
+  level: z.number().finite(),
+  trend: z.enum(['rising', 'falling', 'stable']),
+  changeRate: z.number().finite(),
+  timestamp: z.string().datetime(),
+});
 
 export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
   const { pool } = deps;
@@ -31,6 +37,15 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     const level = await getWaterLevel(pool, stationId);
     if (!level) return reply.code(404).send({ error: 'no data yet' });
     return level;
+  });
+
+  app.post('/river/:stationId', async (req, reply) => {
+    const { stationId } = req.params as { stationId: string };
+    if (!getStationById(stationId)) return reply.code(404).send({ error: 'unknown station' });
+    const parsed = riverIngestBody.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: 'invalid body' });
+    await upsertWaterLevel(pool, { stationId, ...parsed.data });
+    return reply.code(204).send();
   });
 
   app.get('/news', async () => getNews(pool));
