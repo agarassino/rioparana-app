@@ -21,7 +21,24 @@ interface StoredLevel {
   trend: 'rising' | 'falling' | 'stable';
   changeRate: number;
   timestamp: string;
-  updatedAt: string;
+}
+
+function isStoredLevel(value: unknown, requestedStationId: string): value is StoredLevel {
+  if (typeof value !== 'object' || value === null) return false;
+
+  const candidate = value as Partial<StoredLevel>;
+  return (
+    candidate.stationId === requestedStationId &&
+    typeof candidate.level === 'number' &&
+    Number.isFinite(candidate.level) &&
+    (candidate.trend === 'rising' ||
+      candidate.trend === 'falling' ||
+      candidate.trend === 'stable') &&
+    typeof candidate.changeRate === 'number' &&
+    Number.isFinite(candidate.changeRate) &&
+    typeof candidate.timestamp === 'string' &&
+    Number.isFinite(Date.parse(candidate.timestamp))
+  );
 }
 
 // Read the shared cache. Returns null on any error so callers can render their
@@ -35,12 +52,14 @@ export async function getBackendLevel(stationId: string): Promise<WaterLevel | n
     });
     if (!response.ok) return null;
 
-    const data = (await response.json()) as StoredLevel;
+    const data: unknown = await response.json();
+    if (!isStoredLevel(data, stationId)) return null;
+
     return {
       stationId: data.stationId,
-      level: Number(data.level),
+      level: data.level,
       trend: data.trend,
-      changeRate: Number(data.changeRate),
+      changeRate: data.changeRate,
       timestamp: new Date(data.timestamp),
     };
   } catch {

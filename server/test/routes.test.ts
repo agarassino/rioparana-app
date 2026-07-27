@@ -98,6 +98,50 @@ describe('routes', () => {
     await a.close();
   });
 
+  it('POST /river/:id ingests a crowd-sourced level and GET returns it', async () => {
+    const a = await app();
+    const res = await a.inject({
+      method: 'POST', url: '/river/parana', headers: H,
+      payload: { level: 3.14, trend: 'rising', changeRate: 12, timestamp: '2026-07-24T00:00:00.000Z' },
+    });
+    expect(res.statusCode).toBe(204);
+    const get = await a.inject({ method: 'GET', url: '/river/parana', headers: H });
+    expect(get.json().level).toBe(3.14);
+    expect(get.json().trend).toBe('rising');
+    await a.close();
+  });
+
+  it('POST /river/:id returns 404 for unknown station', async () => {
+    const a = await app();
+    const res = await a.inject({
+      method: 'POST', url: '/river/nope', headers: H,
+      payload: { level: 1, trend: 'stable', changeRate: 0, timestamp: '2026-07-24T00:00:00.000Z' },
+    });
+    expect(res.statusCode).toBe(404);
+    await a.close();
+  });
+
+  it('POST /river/:id rejects an invalid body', async () => {
+    const a = await app();
+    const res = await a.inject({
+      method: 'POST', url: '/river/parana', headers: H,
+      payload: { level: 'high', trend: 'up' },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toBe('invalid body');
+    await a.close();
+  });
+
+  it('POST /river/:id rejects requests without api key', async () => {
+    const a = await app();
+    const res = await a.inject({
+      method: 'POST', url: '/river/parana',
+      payload: { level: 3.14, trend: 'rising', changeRate: 12, timestamp: '2026-07-24T00:00:00.000Z' },
+    });
+    expect(res.statusCode).toBe(401);
+    await a.close();
+  });
+
   it('POST /devices/ping rejects invalid deviceId', async () => {
     const a = await app();
     const res = await a.inject({
