@@ -1,52 +1,9 @@
 import { WaterLevel } from '../../types';
 import { getStationById } from '../../config/stations';
-import { supabase, WaterLevelRow } from '../supabase';
+import { getBackendLevel, pushBackendLevel } from './backend';
 
 // Prefectura Naval Argentina - Alturas de ríos
 const PNA_BASE_URL = 'https://contenidosweb.prefecturanaval.gob.ar/alturas';
-
-// Guardar nivel en Supabase
-async function saveToSupabase(level: WaterLevel): Promise<void> {
-  try {
-    const row: WaterLevelRow = {
-      station_id: level.stationId,
-      level: level.level,
-      trend: level.trend,
-      change_rate: level.changeRate,
-      timestamp: level.timestamp.toISOString(),
-    };
-
-    await supabase
-      .from('water_levels')
-      .upsert(row, { onConflict: 'station_id' });
-  } catch (error) {
-    console.log('Error saving water level to Supabase:', error);
-  }
-}
-
-// Leer nivel de Supabase (fallback)
-async function getFromSupabase(stationId: string): Promise<WaterLevel | null> {
-  try {
-    const { data, error } = await supabase
-      .from('water_levels')
-      .select('*')
-      .eq('station_id', stationId)
-      .single();
-
-    if (error || !data) return null;
-
-    return {
-      stationId: data.station_id,
-      timestamp: new Date(data.timestamp),
-      level: Number(data.level),
-      trend: data.trend as 'rising' | 'falling' | 'stable',
-      changeRate: Number(data.change_rate),
-    };
-  } catch (error) {
-    console.log('Error reading from Supabase:', error);
-    return null;
-  }
-}
 
 // Parsear HTML de Prefectura Naval para extraer nivel del río
 function parseWaterLevel(html: string, stationId: string): WaterLevel | null {
@@ -106,11 +63,21 @@ function parseWaterLevel(html: string, stationId: string): WaterLevel | null {
   }
 }
 
+// PNA (Prefectura) only responds from Argentine residential IPs and can hang
+// indefinitely from abroad. A hard timeout guarantees this call always resolves
+// so the UI never gets stuck on a loading spinner. When PNA is unreachable
+// (e.g. Google review from a foreign IP) we fall back to the backend cache,
+// which is kept fresh by pushes from users' phones inside Argentina.
+const PNA_TIMEOUT_MS = 5000;
+
 export async function getCurrentWaterLevel(stationId: string): Promise<WaterLevel | null> {
   const station = getStationById(stationId);
   if (!station) return null;
 
   const url = `${PNA_BASE_URL}/?page=historico&tiempo=7&id=${station.code}`;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), PNA_TIMEOUT_MS);
 
   try {
     const response = await fetch(url, {
@@ -118,6 +85,7 @@ export async function getCurrentWaterLevel(stationId: string): Promise<WaterLeve
         'Accept': 'text/html',
         'User-Agent': 'ParanaInfo-App/1.0',
       },
+      signal: controller.signal,
     });
 
     if (!response.ok) {
@@ -129,21 +97,23 @@ export async function getCurrentWaterLevel(stationId: string): Promise<WaterLeve
 
     if (level) {
       console.log(`✅ PNA data for ${stationId}:`, level.level, 'm', level.trend);
-      // Guardar en Supabase para futuro fallback
-      saveToSupabase(level);
+      // Populate the shared backend cache so users abroad still see a value.
+      pushBackendLevel(level);
       return level;
     }
 
-    // Si no se pudo parsear, intentar Supabase
-    console.log('Could not parse PNA data, trying Supabase for', stationId);
-    return await getFromSupabase(stationId);
+    // Parsing failed: fall back to the last cached value.
+    console.log('Could not parse PNA data, trying backend for', stationId);
+    return await getBackendLevel(stationId);
   } catch (error: any) {
-    console.log('❌ PNA API Error:', {
+    // Timeout, abort, network error or foreign-IP block: use the cache.
+    console.log('❌ PNA API Error, using backend cache:', {
       stationId,
       message: error?.message,
-      url,
     });
-    return await getFromSupabase(stationId);
+    return await getBackendLevel(stationId);
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
