@@ -1,14 +1,10 @@
 import { WaterLevel } from '../../types';
 
-// Own backend (Fastify + Postgres on Hetzner/Coolify): an always-on, globally
-// reachable shared cache. Phones inside Argentina scrape PNA and push levels
-// here; everyone (including reviewers abroad) reads them back.
-//
-// Configure via EXPO_PUBLIC_* env vars (see .env.example). The fallbacks are
-// what ships in the release build, so keep API_BASE_URL pointing at the live
-// Coolify domain.
+// Shared backend cache used when PNA cannot be reached (for example, from
+// outside Argentina). Release builds use the production API by default, while
+// EXPO_PUBLIC_* variables allow environment-specific overrides.
 const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_BASE_URL || 'https://REPLACE-WITH-HETZNER-DOMAIN';
+  process.env.EXPO_PUBLIC_API_BASE_URL || 'https://api.rioparana.com.ar';
 const API_KEY = process.env.EXPO_PUBLIC_APP_API_KEY || '';
 
 const REQUEST_TIMEOUT_MS = 5000;
@@ -25,36 +21,58 @@ interface StoredLevel {
   trend: 'rising' | 'falling' | 'stable';
   changeRate: number;
   timestamp: string;
-  updatedAt: string;
 }
 
-// Read the shared cache. Returns null on any error (never throws, never hangs).
+function isStoredLevel(value: unknown, requestedStationId: string): value is StoredLevel {
+  if (typeof value !== 'object' || value === null) return false;
+
+  const candidate = value as Partial<StoredLevel>;
+  return (
+    candidate.stationId === requestedStationId &&
+    typeof candidate.level === 'number' &&
+    Number.isFinite(candidate.level) &&
+    (candidate.trend === 'rising' ||
+      candidate.trend === 'falling' ||
+      candidate.trend === 'stable') &&
+    typeof candidate.changeRate === 'number' &&
+    Number.isFinite(candidate.changeRate) &&
+    typeof candidate.timestamp === 'string' &&
+    Number.isFinite(Date.parse(candidate.timestamp))
+  );
+}
+
+// Read the shared cache. Returns null on any error so callers can render their
+// existing unavailable state instead of throwing or hanging.
 export async function getBackendLevel(stationId: string): Promise<WaterLevel | null> {
-  const t = withTimeout(REQUEST_TIMEOUT_MS);
+  const timeout = withTimeout(REQUEST_TIMEOUT_MS);
   try {
-    const res = await fetch(`${API_BASE_URL}/river/${stationId}`, {
+    const response = await fetch(`${API_BASE_URL}/river/${stationId}`, {
       headers: { 'x-api-key': API_KEY },
-      signal: t.signal,
+      signal: timeout.signal,
     });
-    if (!res.ok) return null;
-    const data = (await res.json()) as StoredLevel;
+    if (!response.ok) return null;
+
+    const data: unknown = await response.json();
+    if (!isStoredLevel(data, stationId)) return null;
+
     return {
       stationId: data.stationId,
-      level: Number(data.level),
+      level: data.level,
       trend: data.trend,
-      changeRate: Number(data.changeRate),
+      changeRate: data.changeRate,
       timestamp: new Date(data.timestamp),
     };
   } catch {
     return null;
   } finally {
-    t.clear();
+    timeout.clear();
   }
 }
 
-// Push a freshly scraped level to the shared cache. Best-effort, fire-and-forget.
+// Push a freshly scraped level to the shared cache. Best-effort: cache
+// population must never break the user's request.
 export async function pushBackendLevel(level: WaterLevel): Promise<void> {
-  const t = withTimeout(REQUEST_TIMEOUT_MS);
+  const timeout = withTimeout(REQUEST_TIMEOUT_MS);
   try {
     await fetch(`${API_BASE_URL}/river/${level.stationId}`, {
       method: 'POST',
@@ -65,11 +83,11 @@ export async function pushBackendLevel(level: WaterLevel): Promise<void> {
         changeRate: level.changeRate,
         timestamp: level.timestamp.toISOString(),
       }),
-      signal: t.signal,
+      signal: timeout.signal,
     });
   } catch {
-    // Ignore — populating the cache must never break the user's request.
+    // Ignore cache failures; the freshly scraped level remains usable.
   } finally {
-    t.clear();
+    timeout.clear();
   }
 }

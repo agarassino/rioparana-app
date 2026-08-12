@@ -298,3 +298,18 @@ a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visibl
   .masthead-inner { gap: var(--space-2xs); }
   .facts li { grid-template-columns: 1fr; gap: var(--space-3xs); }
 }
+
+/* CSS-only compatibility layer for the original guide and legal-page DOM. */
+.top { border-bottom: var(--rule-hair) solid var(--color-rule); padding: var(--space-lg) 0 var(--space-xl); }
+.top .eyebrow { display:block; font-family:var(--font-mono); font-size:var(--text-xs); font-weight:600; letter-spacing:var(--tracking-label); text-transform:uppercase; color:var(--color-accent); margin:0 0 var(--space-2xs); }
+.top h1 { font-size:var(--text-3xl); font-weight:900; margin:var(--space-xs) 0 var(--space-sm); max-width:20ch; }
+.top .lede { font-size:var(--text-lg); color:var(--color-ink-2); max-width:var(--measure); }
+.top + main { padding:var(--space-xl) 0 var(--space-2xl); }
+.top + main section h2 { font-size:var(--text-xl); margin:var(--space-xl) 0 var(--space-sm); }
+.container { max-width:800px; margin:0 auto; padding:var(--space-xl) 22px var(--space-2xl); }
+.container h1 { font-size:var(--text-3xl); margin-bottom:var(--space-2xs); }
+.container h2 { font-size:var(--text-lg); margin:var(--space-lg) 0 var(--space-xs); }
+.container p { margin-bottom:var(--space-sm); }
+.container ul { margin:0 0 var(--space-sm); padding-left:var(--space-md); }
+.container li { margin-bottom:var(--space-3xs); }
+.container .date { font-family:var(--font-mono); font-size:var(--text-xs); color:var(--color-muted); margin-bottom:var(--space-lg); }

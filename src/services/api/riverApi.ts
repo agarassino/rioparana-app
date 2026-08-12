@@ -63,11 +63,9 @@ function parseWaterLevel(html: string, stationId: string): WaterLevel | null {
   }
 }
 
-// PNA (Prefectura) only responds from Argentine residential IPs and can hang
-// indefinitely from abroad. A hard timeout guarantees this call always resolves
-// so the UI never gets stuck on a loading spinner. When PNA is unreachable
-// (e.g. Google review from a foreign IP) we fall back to the backend cache,
-// which is kept fresh by pushes from users' phones inside Argentina.
+// PNA can be unreachable from foreign IPs and can hang indefinitely. The
+// timeout guarantees that this call resolves, then the shared backend cache is
+// used as a graceful fallback.
 const PNA_TIMEOUT_MS = 5000;
 
 export async function getCurrentWaterLevel(stationId: string): Promise<WaterLevel | null> {
@@ -97,16 +95,14 @@ export async function getCurrentWaterLevel(stationId: string): Promise<WaterLeve
 
     if (level) {
       console.log(`✅ PNA data for ${stationId}:`, level.level, 'm', level.trend);
-      // Populate the shared backend cache so users abroad still see a value.
+      // Populate the cache without delaying the current successful request.
       pushBackendLevel(level);
       return level;
     }
 
-    // Parsing failed: fall back to the last cached value.
     console.log('Could not parse PNA data, trying backend for', stationId);
     return await getBackendLevel(stationId);
   } catch (error: any) {
-    // Timeout, abort, network error or foreign-IP block: use the cache.
     console.log('❌ PNA API Error, using backend cache:', {
       stationId,
       message: error?.message,
