@@ -9,13 +9,16 @@
     "scheme": "rioparana",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#3A6070"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.syloper.rioparanaapp"
+      "bundleIdentifier": "com.syloper.rioparanaapp",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Usamos tu ubicación para mostrarte la estación del río más cercana."
+      }
     },
     "android": {
       "adaptiveIcon": {

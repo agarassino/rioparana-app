@@ -11,7 +11,6 @@ import {
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { COLORS } from '../src/config/theme';
-import { PurchaseProvider } from '../src/context/PurchaseContext';
 
 // Mantener splash screen visible mientras cargan las fuentes
 SplashScreen.preventAutoHideAsync();
@@ -48,8 +47,7 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <PurchaseProvider>
-        <StatusBar style="light" />
+      <StatusBar style="light" />
         <Stack
           screenOptions={{
             headerStyle: { backgroundColor: COLORS.riverDark },
@@ -66,7 +64,6 @@ export default function RootLayout() {
             }}
           />
         </Stack>
-      </PurchaseProvider>
     </QueryClientProvider>
   );
 }
