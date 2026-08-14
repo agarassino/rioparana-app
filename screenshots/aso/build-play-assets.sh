@@ -37,14 +37,19 @@ mkdir -p "$OUT"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
-# render <source> <output> <headline> <subline>
+# Height of the iOS status bar in these captures. Removing it keeps the iPhone
+# Dynamic Island out of a listing that ships on Google Play, and leaves the
+# app's own header as the top edge of the card.
+STATUS_BAR=165
+
+# render <source> <output> <headline> <subline> [status-bar-rows-to-remove]
 render() {
-  local src="$1" out="$2" head="$3" sub="$4"
+  local src="$1" out="$2" head="$3" sub="$4" chop="${5:-$STATUS_BAR}"
 
   magick -size "${W}x${H}" "gradient:${RIVER_DARK}-${RIVER}" "$TMP/bg.png"
 
   # Scale the capture into the band, keeping its aspect ratio.
-  magick "$src" -resize "${IMG_W}x${IMG_H}" "$TMP/shot.png"
+  magick "$src" -chop "0x${chop}+0+0" -resize "${IMG_W}x${IMG_H}" "$TMP/shot.png"
   local sw sh
   sw=$(magick identify -format '%w' "$TMP/shot.png")
   sh=$(magick identify -format '%h' "$TMP/shot.png")
@@ -105,9 +110,10 @@ render "$RAW/08-stations-clean.png"         "$OUT/03-estaciones.png" \
   "10 estaciones del Paraná" \
   "De Corrientes a San Lorenzo"
 
+# This one is a mid-page crop, so it has no status bar to remove.
 render "$RAW/07-noticias-crop.png"          "$OUT/04-noticias-106.png" \
   "Noticias y el 106, a mano" \
-  "Prefectura Naval y emergencias náuticas"
+  "Prefectura Naval y emergencias náuticas" 0
 
 render "$RAW/04-profile.png"                "$OUT/05-fuentes.png" \
   "Datos públicos, app independiente" \
