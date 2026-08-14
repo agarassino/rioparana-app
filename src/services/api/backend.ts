@@ -214,24 +214,31 @@ export async function getBackendWeather(
   }
 }
 
-// Push a freshly scraped level to the shared cache. Best-effort: cache
-// population must never break the user's request.
-export async function pushBackendLevel(level: WaterLevel): Promise<void> {
+// Push every station scraped from the PNA index in one request. A phone inside
+// Argentina refreshes the whole shared cache this way, so the data stays warm
+// for everyone else without needing many users. Best-effort: cache population
+// must never break the user's request.
+export async function pushBackendLevels(levels: WaterLevel[]): Promise<void> {
+  if (levels.length === 0) return;
+
   const timeout = withTimeout(REQUEST_TIMEOUT_MS);
   try {
-    await fetch(`${API_BASE_URL}/river/${level.stationId}`, {
+    await fetch(`${API_BASE_URL}/river`, {
       method: 'POST',
       headers: { 'x-api-key': API_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        level: level.level,
-        trend: level.trend,
-        changeRate: level.changeRate,
-        timestamp: level.timestamp.toISOString(),
+        readings: levels.map((level) => ({
+          stationId: level.stationId,
+          level: level.level,
+          trend: level.trend,
+          changeRate: level.changeRate,
+          timestamp: level.timestamp.toISOString(),
+        })),
       }),
       signal: timeout.signal,
     });
   } catch {
-    // Ignore cache failures; the freshly scraped level remains usable.
+    // Ignore cache failures; the freshly scraped levels remain usable.
   } finally {
     timeout.clear();
   }

@@ -1,117 +1,41 @@
 import { WaterLevel } from '../../types';
 import { getStationById } from '../../config/stations';
-import { getBackendLevel, pushBackendLevel } from './backend';
+import { getBackendLevel, pushBackendLevels } from './backend';
+import { fetchAllLevels } from './riverIndex';
 
-// Prefectura Naval Argentina - Alturas de ríos
-const PNA_BASE_URL = 'https://contenidosweb.prefecturanaval.gob.ar/alturas';
+// One scrape of the PNA index covers every station, so opening a second
+// station costs nothing and the shared cache gets the whole set at once.
+const INDEX_CACHE_MS = 10 * 60 * 1000;
 
-// Parsear HTML de Prefectura Naval para extraer nivel del río
-function parseWaterLevel(html: string, stationId: string): WaterLevel | null {
-  try {
-    // La tabla tiene formato:
-    // <td><i class="fa fa-calendar"></i> 2026-01-16 <i class="fa fa-clock-o"></i> 00:00</td>
-    // <td>2.77 Mts</td>
+let cachedLevels: WaterLevel[] | null = null;
+let cachedAt = 0;
 
-    // Extraer todas las fechas y niveles por separado
-    const datePattern = /<td[^>]*><i[^>]*><\/i>\s*(\d{4}-\d{2}-\d{2})\s*<i[^>]*><\/i>\s*(\d{2}:\d{2})<\/td>/gi;
-    const levelPattern = /<td[^>]*>(\d+\.?\d*)\s*Mts<\/td>/gi;
+async function getIndexLevels(): Promise<WaterLevel[]> {
+  const now = Date.now();
+  if (cachedLevels && now - cachedAt < INDEX_CACHE_MS) return cachedLevels;
 
-    const dates: { date: string; time: string }[] = [];
-    const levels: number[] = [];
-
-    let dateMatch;
-    while ((dateMatch = datePattern.exec(html)) !== null) {
-      dates.push({ date: dateMatch[1], time: dateMatch[2] });
-    }
-
-    let levelMatch;
-    while ((levelMatch = levelPattern.exec(html)) !== null) {
-      levels.push(parseFloat(levelMatch[1]));
-    }
-
-    if (dates.length === 0 || levels.length === 0) {
-      console.log('Could not extract dates or levels from PNA HTML');
-      return null;
-    }
-
-    // El primer par es el más reciente
-    const currentLevel = levels[0];
-    const timestamp = new Date(`${dates[0].date}T${dates[0].time}:00`);
-
-    let trend: 'rising' | 'falling' | 'stable' = 'stable';
-    let changeRate = 0;
-
-    if (levels.length > 1) {
-      const previousLevel = levels[1];
-      const diff = currentLevel - previousLevel;
-      changeRate = diff * 100; // cm por período
-
-      if (diff > 0.02) trend = 'rising';
-      else if (diff < -0.02) trend = 'falling';
-    }
-
-    return {
-      stationId,
-      timestamp,
-      level: currentLevel,
-      trend,
-      changeRate,
-    };
-  } catch (error) {
-    console.log('Error parsing water level HTML:', error);
-    return null;
+  const levels = await fetchAllLevels();
+  if (levels.length > 0) {
+    cachedLevels = levels;
+    cachedAt = now;
+    // Populate the shared cache without delaying the current request.
+    pushBackendLevels(levels);
   }
+  return levels;
 }
-
-// PNA can be unreachable from foreign IPs and can hang indefinitely. The
-// timeout guarantees that this call resolves, then the shared backend cache is
-// used as a graceful fallback.
-const PNA_TIMEOUT_MS = 5000;
 
 export async function getCurrentWaterLevel(stationId: string): Promise<WaterLevel | null> {
-  const station = getStationById(stationId);
-  if (!station) return null;
+  if (!getStationById(stationId)) return null;
 
-  const url = `${PNA_BASE_URL}/?page=historico&tiempo=7&id=${station.code}`;
+  const levels = await getIndexLevels();
+  const scraped = levels.find((level) => level.stationId === stationId);
+  if (scraped) return scraped;
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), PNA_TIMEOUT_MS);
-
-  try {
-    const response = await fetch(url, {
-      headers: {
-        'Accept': 'text/html',
-        'User-Agent': 'ParanaInfo-App/1.0',
-      },
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-
-    const html = await response.text();
-    const level = parseWaterLevel(html, stationId);
-
-    if (level) {
-      console.log(`✅ PNA data for ${stationId}:`, level.level, 'm', level.trend);
-      // Populate the cache without delaying the current successful request.
-      pushBackendLevel(level);
-      return level;
-    }
-
-    console.log('Could not parse PNA data, trying backend for', stationId);
-    return await getBackendLevel(stationId);
-  } catch (error: any) {
-    console.log('❌ PNA API Error, using backend cache:', {
-      stationId,
-      message: error?.message,
-    });
-    return await getBackendLevel(stationId);
-  } finally {
-    clearTimeout(timeout);
-  }
+  // PNA is unreachable from foreign IPs, and it does not publish every station
+  // every day. Either way the shared cache answers.
+  return getBackendLevel(stationId);
 }
+
 
 export function calculateFishingCondition(level: WaterLevel): 'optimal' | 'good' | 'regular' | 'poor' {
   const { trend, changeRate } = level;

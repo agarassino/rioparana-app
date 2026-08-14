@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { getBackendNews, getBackendWeather } from '../src/services/api/backend';
+import {
+  getBackendNews,
+  getBackendWeather,
+  pushBackendLevels,
+} from '../src/services/api/backend';
 
 const NEWS_PAYLOAD = [
   { id: '/noticias/uno', title: 'Alerta por bajante', date: '10 de agosto', url: 'https://www.argentina.gob.ar/noticias/uno' },
@@ -154,5 +158,66 @@ describe('getBackendWeather', () => {
     }));
 
     expect(await getBackendWeather(-27.47, -58.83)).toBeNull();
+  });
+});
+
+describe('pushBackendLevels', () => {
+  const levels = [
+    {
+      stationId: 'rosario',
+      level: 3,
+      trend: 'stable' as const,
+      changeRate: 0,
+      timestamp: new Date('2026-08-14T15:00:00.000Z'),
+    },
+    {
+      stationId: 'parana',
+      level: 2.83,
+      trend: 'falling' as const,
+      changeRate: -4,
+      timestamp: new Date('2026-08-14T15:00:00.000Z'),
+    },
+  ];
+
+  test('posts the whole batch to the shared cache in one request', async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true, json: async () => ({}) }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await pushBackendLevels(levels);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toMatch(/\/river$/);
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string).readings).toHaveLength(2);
+  });
+
+  test('serialises timestamps as ISO strings', async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true, json: async () => ({}) }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await pushBackendLevels(levels);
+
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(JSON.parse(init.body as string).readings[0].timestamp).toBe(
+      '2026-08-14T15:00:00.000Z'
+    );
+  });
+
+  test('does not call the backend for an empty batch', async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true, json: async () => ({}) }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await pushBackendLevels([]);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  test('never throws when the request fails', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      throw new Error('network down');
+    }));
+
+    await expect(pushBackendLevels(levels)).resolves.toBeUndefined();
   });
 });
