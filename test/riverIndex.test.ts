@@ -13,12 +13,12 @@ describe('parseRiverIndex', () => {
   test('maps configured station codes to their station ids', () => {
     const ids = parseRiverIndex(FIXTURE).map((l) => l.stationId).sort();
 
-    expect(ids).toEqual(['barranqueras', 'corrientes', 'parana', 'rosario']);
+    expect(ids).toEqual(['barranqueras', 'corrientes', 'parana', 'rosario', 'tigre']);
   });
 
   test('drops ports the app does not list', () => {
-    // GUAYRA (BRASIL) and TIGRE are published but not configured.
-    expect(parseRiverIndex(FIXTURE)).toHaveLength(4);
+    // GUAYRA (BRASIL) is published but sits outside Argentina, so it is not listed.
+    expect(parseRiverIndex(FIXTURE)).toHaveLength(5);
   });
 
   test('returns the level as a number and the timestamp as a Date', () => {
@@ -49,7 +49,7 @@ describe('fetchAllLevels', () => {
     const levels = await fetchAllLevels();
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(levels).toHaveLength(4);
+    expect(levels).toHaveLength(5);
   });
 
   test('returns an empty list when the index responds with an error', async () => {

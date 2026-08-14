@@ -67,7 +67,7 @@ describe('getCurrentWaterLevel', () => {
     );
     expect(push).toBeDefined();
     const body = JSON.parse((push?.[1] as RequestInit).body as string);
-    expect(body.readings).toHaveLength(4);
+    expect(body.readings).toHaveLength(5);
   });
 
   test('falls back to the shared cache when the index cannot be scraped', async () => {

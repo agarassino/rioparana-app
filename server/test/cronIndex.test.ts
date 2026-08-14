@@ -48,8 +48,8 @@ describe('refreshRiverFromIndex', () => {
   it('reports how many stations it updated', async () => {
     const result = await refreshRiverFromIndex(pool, { fetchFn: indexFetch() });
 
-    // The fixture carries six rows; four of them are configured stations.
-    expect(result.updated).toBe(4);
+    // The fixture carries six rows; five of them are configured stations.
+    expect(result.updated).toBe(5);
   });
 
   it('ignores readings for stations the app does not list', async () => {
