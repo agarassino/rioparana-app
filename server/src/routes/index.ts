@@ -5,6 +5,7 @@ import { getWaterLevel, upsertWaterLevel } from '../stores/riverStore.js';
 import { getNews } from '../stores/newsStore.js';
 import { pingDevice } from '../stores/deviceStore.js';
 import { getWeather } from '../services/weatherService.js';
+import { validateIngest } from '../services/riverIngest.js';
 import { getStationById } from '../config/stations.js';
 import { refreshRiver, refreshNews } from '../cron.js';
 import { safeEqual } from '../middleware/apiKey.js';
@@ -46,6 +47,16 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     if (!getStationById(stationId)) return reply.code(404).send({ error: 'unknown station' });
     const parsed = riverIngestBody.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: 'invalid body' });
+
+    // The api key ships in the mobile bundle, so a valid key proves nothing.
+    // Reject readings the river could not physically have produced.
+    const stored = await getWaterLevel(pool, stationId);
+    const rejection = validateIngest(parsed.data, stored, new Date());
+    if (rejection) {
+      req.log.warn({ stationId, rejection }, 'rejected river ingest');
+      return reply.code(422).send({ error: 'implausible reading' });
+    }
+
     await upsertWaterLevel(pool, { stationId, ...parsed.data });
     return reply.code(204).send();
   });

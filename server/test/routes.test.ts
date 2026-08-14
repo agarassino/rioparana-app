@@ -12,6 +12,11 @@ const OM = {
 };
 const KEY = 'secret';
 const H = { 'x-api-key': KEY };
+
+// Ingested readings must be recent, so tests cannot pin a literal date.
+function recentIso(): string {
+  return new Date().toISOString();
+}
 let pool: Pool;
 
 beforeEach(async () => {
@@ -102,7 +107,7 @@ describe('routes', () => {
     const a = await app();
     const res = await a.inject({
       method: 'POST', url: '/river/parana', headers: H,
-      payload: { level: 3.14, trend: 'rising', changeRate: 12, timestamp: '2026-07-24T00:00:00.000Z' },
+      payload: { level: 3.14, trend: 'rising', changeRate: 12, timestamp: recentIso() },
     });
     expect(res.statusCode).toBe(204);
     const get = await a.inject({ method: 'GET', url: '/river/parana', headers: H });
@@ -129,6 +134,53 @@ describe('routes', () => {
     });
     expect(res.statusCode).toBe(400);
     expect(res.json().error).toBe('invalid body');
+    await a.close();
+  });
+
+  it('POST /river/:id rejects an implausible level without touching stored data', async () => {
+    const a = await app();
+    await a.inject({
+      method: 'POST', url: '/river/parana', headers: H,
+      payload: { level: 3.14, trend: 'rising', changeRate: 12, timestamp: recentIso() },
+    });
+
+    const res = await a.inject({
+      method: 'POST', url: '/river/parana', headers: H,
+      payload: { level: 9999, trend: 'rising', changeRate: 12, timestamp: recentIso() },
+    });
+
+    expect(res.statusCode).toBe(422);
+    const get = await a.inject({ method: 'GET', url: '/river/parana', headers: H });
+    expect(get.json().level).toBe(3.14);
+    await a.close();
+  });
+
+  it('POST /river/:id rejects a reading older than a day', async () => {
+    const a = await app();
+    const res = await a.inject({
+      method: 'POST', url: '/river/parana', headers: H,
+      payload: {
+        level: 3.14, trend: 'rising', changeRate: 12,
+        timestamp: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
+      },
+    });
+    expect(res.statusCode).toBe(422);
+    await a.close();
+  });
+
+  it('POST /river/:id rejects a forged jump from a recent reading', async () => {
+    const a = await app();
+    await a.inject({
+      method: 'POST', url: '/river/parana', headers: H,
+      payload: { level: 3.14, trend: 'rising', changeRate: 12, timestamp: recentIso() },
+    });
+
+    const res = await a.inject({
+      method: 'POST', url: '/river/parana', headers: H,
+      payload: { level: 9, trend: 'rising', changeRate: 12, timestamp: recentIso() },
+    });
+
+    expect(res.statusCode).toBe(422);
     await a.close();
   });
 
