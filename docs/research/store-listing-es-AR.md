@@ -1,43 +1,88 @@
 # Ficha de Play Store — es-AR
 
-Texto listo para pegar en Google Play Console. Reemplaza el listing detectado el 2026-08-08.
+Fuente única para el texto y los gráficos de la ficha.
 
-Cada afirmación de este texto está verificada contra el código: 10 estaciones en
+Cada afirmación está verificada contra el código: 10 estaciones en
 `server/src/config/stations.ts`, campos de clima en `src/types/index.ts`, y las
-pantallas del build 2.0.1.
+pantallas del build 2.0.2 (versionCode 8).
+
+---
+
+## Corrección bloqueante: "en tiempo real"
+
+El texto cargado en Console el 2026-08-14 dice, en la descripción completa:
+
+> Consultá el nivel del río Paraná **en tiempo real** desde las estaciones de
+> Prefectura Naval Argentina.
+
+**Esa frase hay que sacarla antes de enviar a revisión.** Medido ese mismo día
+contra la API de producción: Rosario y Paraná tenían timestamp del 31 de julio,
+y Barranqueras estaba vacía (`no data yet`). La captura `02-tendencia.png`
+muestra en pantalla "Actualizado: 31 de julio".
+
+Prometer tiempo real con un screenshot que exhibe un dato de dos semanas atrás
+es exactamente el patrón que motivó el rechazo por misleading claims. Reemplazo:
+
+```
+Consultá la altura del río Paraná en 10 estaciones, con la información pública de Prefectura Naval Argentina.
+```
+
+Se puede volver a "tiempo real" cuando el caché del río se mantenga fresco, que
+depende de resolver el crowd-push sin usuarios.
 
 ---
 
 ## Título (máx. 30 caracteres)
 
-**Recomendado — 27 caracteres**
+Cargado en Console — 25 caracteres, correcto, no es necesario tocarlo:
 
 ```
-Paraná Info: altura del río
+Río Paraná: nivel y clima
 ```
 
-Alternativa sin marca, si se prioriza intención de búsqueda pura — 29 caracteres:
+Refinamiento opcional — 26 caracteres. `altura del río paraná` tiene más volumen
+de búsqueda que `nivel`, pero la ganancia es marginal:
 
 ```
-Altura y nivel del Río Paraná
+Río Paraná: altura y clima
 ```
 
-El título anterior, `Río Paraná App - Info del rio`, gastaba 18 de sus 29 caracteres
-en `App - Info del rio`, que no aporta valor de búsqueda y además llevaba `rio` sin tilde.
+El título original, `Río Paraná App - Info del rio`, gastaba 18 de sus 29
+caracteres en `App - Info del rio`, que no aporta valor de búsqueda y además
+llevaba `rio` sin tilde.
 
 ---
 
 ## Descripción corta (máx. 80 caracteres)
 
-**74 caracteres**
+El texto cargado dice `...clima y pronóstico por estación para pesca y
+navegación`. **`por estación` se lee como estación del año**, sobre todo pegado a
+`pronóstico`. La intención era estación de monitoreo.
+
+**Reemplazo — 72 caracteres**
 
 ```
-Altura del río en 10 estaciones, clima y pronóstico para navegar y pescar.
+Altura del río Paraná en 10 estaciones, con clima y pronóstico a 7 días.
 ```
+
+El número concreto además es verificable y da confianza; `por estación` no
+comunica nada.
 
 ---
 
 ## Descripción completa (máx. 4000 caracteres)
+
+El texto de abajo es el recomendado completo. Si se conserva el que ya está
+cargado, las correcciones mínimas son tres:
+
+1. Sacar `en tiempo real` (ver arriba).
+2. Reemplazar la apertura `🌊 RÍO PARANÁ - Tu app para el río` por la pregunta
+   que el usuario ya tiene en la cabeza: Google pondera las primeras líneas y
+   son las únicas visibles sin desplegar "Más".
+3. Verificar que el descargo de independencia esté presente. Es obligatorio para
+   apps que comunican información gubernamental y es el antecedente directo del
+   rechazo anterior.
+
 
 ```
 ¿A cuánto está el río hoy? Consultá la altura del Paraná en 10 estaciones, desde Corrientes hasta San Lorenzo, con la tendencia de las últimas horas.
