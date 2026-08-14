@@ -2,56 +2,13 @@
 // Fuente: https://www.argentina.gob.ar/prefecturanaval/noticias-pna
 
 import { NewsItem } from '../../types';
-import { supabase, NewsCacheRow } from '../supabase';
+import { getBackendNews } from './backend';
 
 const NEWS_URL = 'https://www.argentina.gob.ar/prefecturanaval/noticias-pna';
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutos
 
 let memoryCachedNews: NewsItem[] | null = null;
 let memoryCacheTimestamp: number = 0;
-
-// Guardar noticias en Supabase
-async function saveToSupabase(news: NewsItem[]): Promise<void> {
-  try {
-    // Primero eliminar noticias antiguas
-    await supabase.from('news_cache').delete().neq('news_id', '');
-
-    // Insertar las nuevas
-    const rows: NewsCacheRow[] = news.map(item => ({
-      news_id: item.id,
-      title: item.title,
-      date: item.date || null,
-      url: item.url,
-    }));
-
-    await supabase.from('news_cache').insert(rows);
-  } catch (error) {
-    console.log('Error saving news to Supabase:', error);
-  }
-}
-
-// Leer noticias de Supabase (fallback)
-async function getFromSupabase(): Promise<NewsItem[]> {
-  try {
-    const { data, error } = await supabase
-      .from('news_cache')
-      .select('*')
-      .order('fetched_at', { ascending: false })
-      .limit(10);
-
-    if (error || !data || data.length === 0) return [];
-
-    return data.map(row => ({
-      id: row.news_id,
-      title: row.title,
-      date: row.date || '',
-      url: row.url,
-    }));
-  } catch (error) {
-    console.log('Error reading news from Supabase:', error);
-    return [];
-  }
-}
 
 function parseHtmlToNews(html: string): NewsItem[] {
   const news: NewsItem[] = [];
@@ -117,16 +74,12 @@ export async function getNews(): Promise<NewsItem[]> {
     if (news.length > 0) {
       memoryCachedNews = news;
       memoryCacheTimestamp = now;
-
-      // Guardar en Supabase para futuro fallback
-      saveToSupabase(news);
-
       return news;
     }
 
-    // Si no se encontraron noticias, intentar Supabase
-    console.log('No news parsed, trying Supabase');
-    return await getFromSupabase();
+    // Si no se pudo parsear, leer la copia compartida del backend
+    console.log('No news parsed, trying backend cache');
+    return await getBackendNews();
   } catch (error: any) {
     console.log('❌ News Scraping Error:', {
       message: error?.message,
@@ -139,8 +92,8 @@ export async function getNews(): Promise<NewsItem[]> {
       return memoryCachedNews;
     }
 
-    // Intentar Supabase
-    return await getFromSupabase();
+    // Último recurso: la copia compartida del backend
+    return await getBackendNews();
   }
 }
 

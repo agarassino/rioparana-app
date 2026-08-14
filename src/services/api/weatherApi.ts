@@ -1,62 +1,8 @@
 import axios from 'axios';
 import { LocationWeather, CurrentWeather, WeatherForecast } from '../../types';
-import { supabase, WeatherCacheRow } from '../supabase';
+import { getBackendWeather } from './backend';
 
 const OPEN_METEO_URL = 'https://api.open-meteo.com/v1/forecast';
-
-// Guardar clima en Supabase
-async function saveToSupabase(lat: number, lon: number, weather: LocationWeather): Promise<void> {
-  try {
-    const row: WeatherCacheRow = {
-      latitude: lat,
-      longitude: lon,
-      data: weather as object,
-    };
-
-    await supabase
-      .from('weather_cache')
-      .upsert(row, { onConflict: 'latitude,longitude' });
-  } catch (error) {
-    console.log('Error saving weather to Supabase:', error);
-  }
-}
-
-// Leer clima de Supabase (fallback)
-async function getFromSupabase(lat: number, lon: number): Promise<LocationWeather | null> {
-  try {
-    // Buscar con tolerancia de ~1km (0.01 grados)
-    const { data, error } = await supabase
-      .from('weather_cache')
-      .select('*')
-      .gte('latitude', lat - 0.01)
-      .lte('latitude', lat + 0.01)
-      .gte('longitude', lon - 0.01)
-      .lte('longitude', lon + 0.01)
-      .order('fetched_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (error || !data) return null;
-
-    const cached = data.data as LocationWeather;
-
-    // Reconstruir las fechas
-    return {
-      ...cached,
-      current: {
-        ...cached.current,
-        timestamp: new Date(cached.current.timestamp),
-      },
-      daily: cached.daily.map(day => ({
-        ...day,
-        date: new Date(day.date),
-      })),
-    };
-  } catch (error) {
-    console.log('Error reading weather from Supabase:', error);
-    return null;
-  }
-}
 
 export async function getWeather(latitude: number, longitude: number): Promise<LocationWeather> {
   try {
@@ -81,9 +27,6 @@ export async function getWeather(latitude: number, longitude: number): Promise<L
       daily: parseDailyForecast(data.daily),
     };
 
-    // Guardar en Supabase para futuro fallback
-    saveToSupabase(latitude, longitude, weather);
-
     return weather;
   } catch (error: any) {
     console.log('❌ Weather API Error:', {
@@ -94,7 +37,7 @@ export async function getWeather(latitude: number, longitude: number): Promise<L
       status: error?.response?.status,
       url: OPEN_METEO_URL,
     });
-    const cached = await getFromSupabase(latitude, longitude);
+    const cached = await getBackendWeather(latitude, longitude);
     if (cached) return cached;
 
     // Si no hay cache, devolver objeto vacío con valores por defecto
