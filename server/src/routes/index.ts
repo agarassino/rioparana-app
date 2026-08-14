@@ -30,6 +30,11 @@ const riverIngestBody = z.object({
   changeRate: z.number().finite(),
   timestamp: z.string().datetime(),
 });
+// A client that scrapes the index page holds every station at once, so it
+// pushes them in one request instead of one per station.
+const riverBatchBody = z.object({
+  readings: z.array(riverIngestBody.extend({ stationId: z.string().min(1) })).max(200),
+});
 
 export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
   const { pool } = deps;
@@ -59,6 +64,34 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 
     await upsertWaterLevel(pool, { stationId, ...parsed.data });
     return reply.code(204).send();
+  });
+
+  app.post('/river', async (req, reply) => {
+    const parsed = riverBatchBody.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: 'invalid body' });
+
+    const now = new Date();
+    let stored = 0;
+    let rejected = 0;
+
+    for (const { stationId, ...reading } of parsed.data.readings) {
+      if (!getStationById(stationId)) {
+        rejected++;
+        continue;
+      }
+      const current = await getWaterLevel(pool, stationId);
+      const rejection = validateIngest(reading, current, now);
+      if (rejection) {
+        req.log.warn({ stationId, rejection }, 'rejected river ingest');
+        rejected++;
+        continue;
+      }
+      await upsertWaterLevel(pool, { stationId, ...reading });
+      stored++;
+    }
+
+    // One bad reading must not discard the rest of the batch.
+    return { stored, rejected };
   });
 
   app.get('/news', async () => getNews(pool));

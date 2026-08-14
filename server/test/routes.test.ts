@@ -184,6 +184,72 @@ describe('routes', () => {
     await a.close();
   });
 
+  it('POST /river stores every plausible reading in a batch', async () => {
+    const a = await app();
+    const res = await a.inject({
+      method: 'POST', url: '/river', headers: H,
+      payload: { readings: [
+        { stationId: 'parana', level: 2.83, trend: 'stable', changeRate: 0, timestamp: recentIso() },
+        { stationId: 'rosario', level: 3.0, trend: 'stable', changeRate: 0, timestamp: recentIso() },
+      ] },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ stored: 2, rejected: 0 });
+    const get = await a.inject({ method: 'GET', url: '/river/parana', headers: H });
+    expect(get.json().level).toBe(2.83);
+    await a.close();
+  });
+
+  it('POST /river keeps the good readings when one is implausible', async () => {
+    const a = await app();
+    const res = await a.inject({
+      method: 'POST', url: '/river', headers: H,
+      payload: { readings: [
+        { stationId: 'parana', level: 2.83, trend: 'stable', changeRate: 0, timestamp: recentIso() },
+        { stationId: 'rosario', level: 9999, trend: 'stable', changeRate: 0, timestamp: recentIso() },
+      ] },
+    });
+
+    expect(res.json()).toMatchObject({ stored: 1, rejected: 1 });
+    const get = await a.inject({ method: 'GET', url: '/river/rosario', headers: H });
+    expect(get.statusCode).toBe(404);
+    await a.close();
+  });
+
+  it('POST /river skips unknown stations without failing the batch', async () => {
+    const a = await app();
+    const res = await a.inject({
+      method: 'POST', url: '/river', headers: H,
+      payload: { readings: [
+        { stationId: 'nope', level: 3, trend: 'stable', changeRate: 0, timestamp: recentIso() },
+        { stationId: 'parana', level: 2.83, trend: 'stable', changeRate: 0, timestamp: recentIso() },
+      ] },
+    });
+
+    expect(res.json()).toMatchObject({ stored: 1, rejected: 1 });
+    await a.close();
+  });
+
+  it('POST /river rejects a malformed batch', async () => {
+    const a = await app();
+    const res = await a.inject({
+      method: 'POST', url: '/river', headers: H, payload: { readings: 'nope' },
+    });
+    expect(res.statusCode).toBe(400);
+    await a.close();
+  });
+
+  it('POST /river rejects requests without api key', async () => {
+    const a = await app();
+    const res = await a.inject({
+      method: 'POST', url: '/river',
+      payload: { readings: [] },
+    });
+    expect(res.statusCode).toBe(401);
+    await a.close();
+  });
+
   it('POST /river/:id rejects requests without api key', async () => {
     const a = await app();
     const res = await a.inject({

@@ -1,11 +1,12 @@
 import type { Pool } from 'pg';
-import { refreshRiver, refreshNews } from './cron.js';
+import { refreshRiverFromIndex, refreshNews } from './cron.js';
 
 export const DEFAULT_REFRESH_INTERVAL_MS = 15 * 60 * 1000;
 
 // River and news are independent: one failing scrape must not cancel the other.
+// The river uses the index page, which covers every station in one request.
 export async function refreshAll(pool: Pool): Promise<void> {
-  await Promise.allSettled([refreshRiver(pool), refreshNews(pool)]);
+  await Promise.allSettled([refreshRiverFromIndex(pool), refreshNews(pool)]);
 }
 
 export interface SchedulerOptions {

@@ -14,6 +14,10 @@ export const STATIONS: Station[] = [
   { id: 'san-lorenzo', name: 'San Lorenzo', code: '270', latitude: -32.75, longitude: -60.7333, province: 'Santa Fe' },
 ];
 
+export function getStationByCode(code: string): Station | undefined {
+  return STATIONS.find((s) => s.code === code);
+}
+
 export function getStationById(id: string): Station | undefined {
   return STATIONS.find((s) => s.id === id);
 }
