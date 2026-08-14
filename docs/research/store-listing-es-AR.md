@@ -74,20 +74,36 @@ Paraná Info es una aplicación independiente. No pertenece a Prefectura Naval A
 
 ## Orden de screenshots
 
-Los capturados en `screenshots/aso/raw-16pro/` alcanzan para las 5 pantallas que
-recomienda el research. El orden importa: Play muestra las primeras dos en el
-resultado de búsqueda, así que ahí va el valor principal, no el splash.
+Los assets listos para subir están en `screenshots/aso/play-ready/`, generados
+por `screenshots/aso/build-play-assets.sh`. Subilos en este orden: Play muestra
+las primeras dos en el resultado de búsqueda, así que ahí va el valor principal.
 
 | # | Archivo | Por qué va ahí |
 |---|---------|----------------|
-| 1 | `01-home-full.png` | Nivel + clima + pronóstico en una sola vista. Es la app entera en una imagen. |
-| 2 | `03-station-detail-rosario.png` | El detalle de estación, que es la razón por la que alguien busca la app. |
-| 3 | `02-stations.png` | Muestra cobertura: son 10 estaciones, no una. |
-| 4 | `05-noticias-emergencia.png` | Noticias y el acceso al 106. |
-| 5 | `04-profile.png` | Fuentes de datos y aclaración de independencia. |
+| 1 | `01-nivel-y-clima.png` | Nivel + clima + pronóstico en una sola vista. Es la app entera en una imagen. |
+| 2 | `02-tendencia.png` | El detalle de estación, que es la razón por la que alguien busca la app. |
+| 3 | `03-estaciones.png` | Muestra cobertura: son 10 estaciones, no una. |
+| 4 | `04-noticias-106.png` | Noticias y el acceso al 106. |
+| 5 | `05-fuentes.png` | Fuentes de datos y aclaración de independencia. |
 
-`06-splash.png` y `play-ready/01-splash.png` quedan afuera: un splash no comunica
-utilidad y ocuparía un lugar en las primeras posiciones.
+Más `feature-graphic.png` (1024x500), que Play pide para la ficha.
+
+El splash queda afuera: no comunica utilidad y ocuparía una de las primeras
+posiciones.
+
+### Por qué no se suben las capturas crudas
+
+Play exige que el lado más largo no supere el doble del más corto. Las capturas
+del simulador son 1206x2622, o sea ratio 2.17, y las viejas de Android 1080x2400,
+ratio 2.22. **Ninguna de las dos se puede subir.** El script las compone sobre un
+lienzo de 1080x1920 (ratio 1.77), que además cumple el mínimo que Play pide para
+ser elegible en ubicaciones destacadas.
+
+### Pendiente en las imágenes
+
+`02-tendencia.png` muestra `Actualizado: 31 de julio` porque el caché del río
+sigue desactualizado para Rosario. Conviene regenerarla cuando el dato esté
+fresco: una ficha con una fecha vieja a la vista sugiere app abandonada.
 
 ---
 
