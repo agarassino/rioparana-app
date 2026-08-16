@@ -74,14 +74,25 @@ for row in re.findall(r'<tr class="[^"]*"\s*>(.*?)</tr>', html, re.S):
         continue
 
     variation = number(field(row, "Variacion"))
-    readings.append({
+    reading = {
         "stationId": station_id,
         "level": level,
         "trend": trend(field(row, "Estado:")),
         # Stored in centimetres, matching the app.
         "changeRate": round(variation * 100, 2) if variation is not None else 0.0,
         "timestamp": published_at,
-    })
+    }
+
+    # Reference heights, published in the same row. Omitted when absent so the
+    # API keeps whatever it already holds instead of clearing it.
+    alert = number(field(row, "Alerta:"))
+    evacuation = number(field(row, "Evacuación:"))
+    if alert is not None:
+        reading["alertLevel"] = alert
+    if evacuation is not None:
+        reading["evacuationLevel"] = evacuation
+
+    readings.append(reading)
 
 json.dump({"readings": readings}, open(OUT, "w"))
 print(f"{len(readings)} of {len(known)} configured stations")
