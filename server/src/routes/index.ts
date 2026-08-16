@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import type { Pool } from 'pg';
 import { z } from 'zod';
-import { getWaterLevel, upsertWaterLevel } from '../stores/riverStore.js';
+import { getAllWaterLevels, getWaterLevel, upsertWaterLevel } from '../stores/riverStore.js';
 import { getNews } from '../stores/newsStore.js';
 import { pingDevice } from '../stores/deviceStore.js';
 import { getWeather } from '../services/weatherService.js';
@@ -97,6 +97,11 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     // One bad reading must not discard the rest of the batch.
     return { stored, rejected };
   });
+
+  // Public, unauthenticated read. The heights come from Prefectura and are
+  // public information, so the landing page can show them without shipping a
+  // key in its JavaScript.
+  app.get('/public/river', async () => getAllWaterLevels(pool));
 
   app.get('/news', async () => getNews(pool));
 

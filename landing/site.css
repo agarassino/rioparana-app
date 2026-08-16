@@ -313,3 +313,15 @@ a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visibl
 .container ul { margin:0 0 var(--space-sm); padding-left:var(--space-md); }
 .container li { margin-bottom:var(--space-3xs); }
 .container .date { font-family:var(--font-mono); font-size:var(--text-xs); color:var(--color-muted); margin-bottom:var(--space-lg); }
+
+/* ---------- LIVE STATION LEVELS ---------- */
+/* Names are static so they stay indexable; the heights arrive from the API. */
+.stations li { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2xs); }
+.st-level { font-variant-numeric: tabular-nums; color: var(--color-muted); font-weight: 600; }
+.st-level[data-state="live"] { color: var(--color-accent); }
+.st-level[data-state="near-alert"] { color: var(--color-emergency); }
+.st-level[data-state="alert"],
+.st-level[data-state="evacuation"] { color: #fff; background: var(--color-emergency);
+  border-radius: var(--radius-sm, 4px); padding: 1px 6px; }
+.stations-note { margin-top: var(--space-sm); font-family: var(--font-mono); font-size: var(--text-sm);
+  color: var(--color-muted); }

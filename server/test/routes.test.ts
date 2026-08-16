@@ -374,3 +374,34 @@ describe('reference levels', () => {
     await a.close();
   });
 });
+
+describe('public read', () => {
+  it('GET /public/river works without an api key', async () => {
+    await upsertWaterLevel(pool, { stationId: 'rosario', level: 3, trend: 'stable', changeRate: 0, timestamp: '2026-08-14T15:00:00.000Z', alertLevel: 5 });
+    const a = await app();
+
+    const res = await a.inject({ method: 'GET', url: '/public/river' });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toHaveLength(1);
+    expect(res.json()[0].alertLevel).toBe(5);
+    await a.close();
+  });
+
+  it('GET /public/river returns an empty list before anything is stored', async () => {
+    const a = await app();
+    const res = await a.inject({ method: 'GET', url: '/public/river' });
+    expect(res.json()).toEqual([]);
+    await a.close();
+  });
+
+  it('does not open up writing', async () => {
+    const a = await app();
+    const res = await a.inject({
+      method: 'POST', url: '/river',
+      payload: { readings: [] },
+    });
+    expect(res.statusCode).toBe(401);
+    await a.close();
+  });
+});

@@ -10,7 +10,11 @@ export function safeEqual(a: string, b: string): boolean {
 
 export function apiKeyGuard(expectedKey: string) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
-    if (request.url.split('?')[0] === '/health') return;
+    const path = request.url.split('?')[0];
+    if (path === '/health') return;
+    // River heights are public information published by Prefectura. Reading
+    // them needs no key; the key exists to gate ingest.
+    if (path.startsWith('/public/')) return;
     const provided = request.headers['x-api-key'];
     const key = Array.isArray(provided) ? provided[0] : provided;
     if (!key || !safeEqual(key, expectedKey)) {

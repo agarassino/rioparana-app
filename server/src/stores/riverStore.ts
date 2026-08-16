@@ -29,6 +29,30 @@ function optionalNumber(value: unknown): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+function toStored(r: Record<string, unknown>): StoredWaterLevel {
+  const alertLevel = optionalNumber(r.alert_level);
+  const evacuationLevel = optionalNumber(r.evacuation_level);
+
+  return {
+    stationId: r.station_id as string,
+    level: Number(r.level),
+    trend: r.trend as Trend,
+    changeRate: Number(r.change_rate),
+    timestamp: new Date(r.timestamp as string).toISOString(),
+    updatedAt: new Date(r.updated_at as string).toISOString(),
+    ...(alertLevel !== undefined ? { alertLevel } : {}),
+    ...(evacuationLevel !== undefined ? { evacuationLevel } : {}),
+  };
+}
+
+export async function getAllWaterLevels(pool: Pool): Promise<StoredWaterLevel[]> {
+  const res = await pool.query(
+    `SELECT station_id, level, trend, change_rate, timestamp, updated_at, alert_level, evacuation_level
+     FROM water_levels ORDER BY station_id`
+  );
+  return res.rows.map(toStored);
+}
+
 export async function getWaterLevel(pool: Pool, stationId: string): Promise<StoredWaterLevel | null> {
   const res = await pool.query(
     `SELECT station_id, level, trend, change_rate, timestamp, updated_at, alert_level, evacuation_level
@@ -36,19 +60,5 @@ export async function getWaterLevel(pool: Pool, stationId: string): Promise<Stor
     [stationId]
   );
   if (res.rows.length === 0) return null;
-  const r = res.rows[0];
-
-  const alertLevel = optionalNumber(r.alert_level);
-  const evacuationLevel = optionalNumber(r.evacuation_level);
-
-  return {
-    stationId: r.station_id,
-    level: Number(r.level),
-    trend: r.trend as Trend,
-    changeRate: Number(r.change_rate),
-    timestamp: new Date(r.timestamp).toISOString(),
-    updatedAt: new Date(r.updated_at).toISOString(),
-    ...(alertLevel !== undefined ? { alertLevel } : {}),
-    ...(evacuationLevel !== undefined ? { evacuationLevel } : {}),
-  };
+  return toStored(res.rows[0]);
 }

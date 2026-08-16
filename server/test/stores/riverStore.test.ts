@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { newDb } from 'pg-mem';
 import { runMigrations } from '../../src/db/index.js';
-import { upsertWaterLevel, getWaterLevel } from '../../src/stores/riverStore.js';
+import { upsertWaterLevel, getWaterLevel, getAllWaterLevels } from '../../src/stores/riverStore.js';
 import type { Pool } from 'pg';
 
 let pool: Pool;
@@ -74,5 +74,28 @@ describe('reference levels', () => {
 
     expect(stored?.level).toBe(3.1);
     expect(stored?.alertLevel).toBe(5);
+  });
+});
+
+describe('getAllWaterLevels', () => {
+  it('returns every stored station', async () => {
+    await upsertWaterLevel(pool, { stationId: 'rosario', level: 3, trend: 'stable', changeRate: 0, timestamp: '2026-08-14T15:00:00.000Z' });
+    await upsertWaterLevel(pool, { stationId: 'parana', level: 2.83, trend: 'falling', changeRate: -4, timestamp: '2026-08-14T15:00:00.000Z' });
+
+    const all = await getAllWaterLevels(pool);
+
+    expect(all.map((l) => l.stationId).sort()).toEqual(['parana', 'rosario']);
+  });
+
+  it('returns an empty list when nothing is stored', async () => {
+    expect(await getAllWaterLevels(pool)).toEqual([]);
+  });
+
+  it('carries the reference levels through', async () => {
+    await upsertWaterLevel(pool, { stationId: 'rosario', level: 3, trend: 'stable', changeRate: 0, timestamp: '2026-08-14T15:00:00.000Z', alertLevel: 5 });
+
+    const [rosario] = await getAllWaterLevels(pool);
+
+    expect(rosario.alertLevel).toBe(5);
   });
 });
