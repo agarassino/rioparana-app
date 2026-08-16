@@ -405,3 +405,28 @@ describe('public read', () => {
     await a.close();
   });
 });
+
+describe('cross-origin reads', () => {
+  it('allows any origin to read the public endpoint', async () => {
+    const a = await app();
+
+    const res = await a.inject({
+      method: 'GET', url: '/public/river', headers: { origin: 'https://rioparana.com.ar' },
+    });
+
+    expect(res.headers['access-control-allow-origin']).toBe('*');
+    await a.close();
+  });
+
+  it('does not open the key-protected endpoints to other origins', async () => {
+    const a = await app();
+
+    const res = await a.inject({
+      method: 'GET', url: '/river/rosario',
+      headers: { ...H, origin: 'https://rioparana.com.ar' },
+    });
+
+    expect(res.headers['access-control-allow-origin']).toBeUndefined();
+    await a.close();
+  });
+});

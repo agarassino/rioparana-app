@@ -21,6 +21,17 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<Fastif
   }
 
   app.get('/health', async () => ({ status: 'ok' }));
+
+  // The public read is meant to be consumed from a browser on another origin,
+  // such as the landing page. Only that prefix is opened; everything else
+  // stays same-origin and behind the key.
+  app.addHook('onSend', async (req, reply, payload) => {
+    if (req.url.split('?')[0].startsWith('/public/')) {
+      reply.header('Access-Control-Allow-Origin', '*');
+    }
+    return payload;
+  });
+
   if (opts.apiKey) app.addHook('preHandler', apiKeyGuard(opts.apiKey));
   if (opts.pool)
     registerRoutes(app, {
