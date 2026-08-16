@@ -58,6 +58,8 @@ export function parseRiverIndex(html: string): WaterLevel[] {
     if (!timestamp) continue;
 
     const variation = Number.parseFloat(field(row, 'Variacion') ?? '');
+    const alertLevel = Number.parseFloat(field(row, 'Alerta:') ?? '');
+    const evacuationLevel = Number.parseFloat(field(row, 'Evacuación:') ?? '');
 
     levels.push({
       stationId: station.id,
@@ -65,6 +67,8 @@ export function parseRiverIndex(html: string): WaterLevel[] {
       trend: parseTrend(field(row, 'Estado:')),
       changeRate: Number.isFinite(variation) ? variation * 100 : 0,
       timestamp,
+      ...(Number.isFinite(alertLevel) ? { alertLevel } : {}),
+      ...(Number.isFinite(evacuationLevel) ? { evacuationLevel } : {}),
     });
   }
 

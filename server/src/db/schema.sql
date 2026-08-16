@@ -36,3 +36,8 @@ CREATE TABLE IF NOT EXISTS device_station_views (
   last_viewed_at timestamptz NOT NULL,
   PRIMARY KEY (device_id, station_id)
 );
+
+-- Reference heights published by Prefectura for each station. Added after the
+-- table shipped, so they must be applied to existing databases too.
+ALTER TABLE water_levels ADD COLUMN IF NOT EXISTS alert_level numeric;
+ALTER TABLE water_levels ADD COLUMN IF NOT EXISTS evacuation_level numeric;

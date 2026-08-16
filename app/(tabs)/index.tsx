@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { FontAwesome6 } from '@expo/vector-icons';
 
 import { Card, Badge, NewsCard } from '../../src/components/ui';
+import { RiverAlert } from '../../src/components/RiverAlert';
 import { useLocation, useWaterLevel, useWeather, useNews } from '../../src/hooks';
 import { NEWS_PAGE_URL } from '../../src/services/api/newsApi';
 import { calculateFishingCondition } from '../../src/services/api/riverApi';
@@ -105,6 +106,7 @@ export default function HomeScreen() {
               <Text style={styles.noData}>Sin datos</Text>
             )}
           </View>
+          {waterLevel && <RiverAlert level={waterLevel} />}
         </Card>
       )}
 

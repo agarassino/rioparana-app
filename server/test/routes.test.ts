@@ -342,3 +342,35 @@ describe('routes', () => {
     await a.close();
   });
 });
+
+describe('reference levels', () => {
+  it('GET /river/:id exposes the alert and evacuation levels', async () => {
+    const a = await app();
+    await a.inject({
+      method: 'POST', url: '/river', headers: H,
+      payload: { readings: [{
+        stationId: 'rosario', level: 3, trend: 'stable', changeRate: 0,
+        timestamp: recentIso(), alertLevel: 5, evacuationLevel: 5.3,
+      }] },
+    });
+
+    const res = await a.inject({ method: 'GET', url: '/river/rosario', headers: H });
+
+    expect(res.json().alertLevel).toBe(5);
+    expect(res.json().evacuationLevel).toBe(5.3);
+    await a.close();
+  });
+
+  it('POST /river accepts a reading without reference levels', async () => {
+    const a = await app();
+    const res = await a.inject({
+      method: 'POST', url: '/river', headers: H,
+      payload: { readings: [{
+        stationId: 'rosario', level: 3, trend: 'stable', changeRate: 0, timestamp: recentIso(),
+      }] },
+    });
+
+    expect(res.json()).toMatchObject({ stored: 1, rejected: 0 });
+    await a.close();
+  });
+});

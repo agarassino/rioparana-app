@@ -74,3 +74,21 @@ describe('fetchRiverIndex', () => {
     await expect(fetchRiverIndex(fetchFn as unknown as typeof fetch)).rejects.toThrow('HTTP 503');
   });
 });
+
+describe('reference levels', () => {
+  it('reads the published alert and evacuation levels', () => {
+    const rosario = parseRiverIndex(FIXTURE).find((r) => r.code === '280');
+
+    expect(rosario?.alertLevel).toBe(5);
+    expect(rosario?.evacuationLevel).toBe(5.3);
+  });
+
+  it('leaves them undefined when the station does not publish them', () => {
+    const stripped = FIXTURE.replace(/data-label="Alerta:">[^<]*/g, 'data-label="Alerta:">-')
+      .replace(/data-label="Evacuación:">[^<]*/g, 'data-label="Evacuación:">-');
+    const rosario = parseRiverIndex(stripped).find((r) => r.code === '280');
+
+    expect(rosario?.alertLevel).toBeUndefined();
+    expect(rosario?.evacuationLevel).toBeUndefined();
+  });
+});

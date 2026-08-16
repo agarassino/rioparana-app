@@ -69,3 +69,13 @@ describe('refreshRiverFromIndex', () => {
     expect(result.updated).toBe(0);
   });
 });
+
+describe('reference levels', () => {
+  it('stores the alert and evacuation levels published for each station', async () => {
+    await refreshRiverFromIndex(pool, { fetchFn: indexFetch() });
+
+    const rosario = await getWaterLevel(pool, 'rosario');
+    expect(rosario?.alertLevel).toBe(5);
+    expect(rosario?.evacuationLevel).toBe(5.3);
+  });
+});

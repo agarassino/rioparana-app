@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import {
+  getBackendLevel,
   getBackendNews,
   getBackendWeather,
   pushBackendLevels,
@@ -219,5 +220,46 @@ describe('pushBackendLevels', () => {
     }));
 
     await expect(pushBackendLevels(levels)).resolves.toBeUndefined();
+  });
+});
+
+describe('reference levels over the shared cache', () => {
+  test('pushBackendLevels forwards the alert and evacuation levels', async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true, json: async () => ({}) }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await pushBackendLevels([{
+      stationId: 'rosario', level: 3, trend: 'stable', changeRate: 0,
+      timestamp: new Date('2026-08-14T15:00:00.000Z'), alertLevel: 5, evacuationLevel: 5.3,
+    }]);
+
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    const reading = JSON.parse(init.body as string).readings[0];
+    expect(reading.alertLevel).toBe(5);
+    expect(reading.evacuationLevel).toBe(5.3);
+  });
+
+  test('getBackendLevel reads them back', async () => {
+    stubFetch({
+      stationId: 'rosario', level: 3, trend: 'stable', changeRate: 0,
+      timestamp: '2026-08-14T15:00:00.000Z', alertLevel: 5, evacuationLevel: 5.3,
+    });
+
+    const level = await getBackendLevel('rosario');
+
+    expect(level?.alertLevel).toBe(5);
+    expect(level?.evacuationLevel).toBe(5.3);
+  });
+
+  test('getBackendLevel still accepts a payload without them', async () => {
+    stubFetch({
+      stationId: 'rosario', level: 3, trend: 'stable', changeRate: 0,
+      timestamp: '2026-08-14T15:00:00.000Z',
+    });
+
+    const level = await getBackendLevel('rosario');
+
+    expect(level?.level).toBe(3);
+    expect(level?.alertLevel).toBeUndefined();
   });
 });

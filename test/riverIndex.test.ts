@@ -66,3 +66,19 @@ describe('fetchAllLevels', () => {
     expect(await fetchAllLevels()).toEqual([]);
   });
 });
+
+describe('reference levels', () => {
+  test('reads the alert and evacuation levels published per station', () => {
+    const rosario = parseRiverIndex(FIXTURE).find((l) => l.stationId === 'rosario');
+
+    expect(rosario?.alertLevel).toBe(5);
+    expect(rosario?.evacuationLevel).toBe(5.3);
+  });
+
+  test('leaves them undefined when the station does not publish them', () => {
+    const stripped = FIXTURE.replace(/data-label="Alerta:">[^<]*/g, 'data-label="Alerta:">-');
+    const rosario = parseRiverIndex(stripped).find((l) => l.stationId === 'rosario');
+
+    expect(rosario?.alertLevel).toBeUndefined();
+  });
+});

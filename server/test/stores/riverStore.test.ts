@@ -37,3 +37,42 @@ describe('riverStore', () => {
     expect(await getWaterLevel(pool, 'nope')).toBeNull();
   });
 });
+
+describe('reference levels', () => {
+  const base = {
+    stationId: 'rosario',
+    level: 3,
+    trend: 'stable' as const,
+    changeRate: 0,
+    timestamp: '2026-08-14T15:00:00.000Z',
+  };
+
+  it('round-trips the alert and evacuation levels', async () => {
+    await upsertWaterLevel(pool, { ...base, alertLevel: 5, evacuationLevel: 5.3 });
+
+    const stored = await getWaterLevel(pool, 'rosario');
+
+    expect(stored?.alertLevel).toBe(5);
+    expect(stored?.evacuationLevel).toBe(5.3);
+  });
+
+  it('stores a reading that carries no reference levels', async () => {
+    await upsertWaterLevel(pool, base);
+
+    const stored = await getWaterLevel(pool, 'rosario');
+
+    expect(stored?.level).toBe(3);
+    expect(stored?.alertLevel).toBeUndefined();
+    expect(stored?.evacuationLevel).toBeUndefined();
+  });
+
+  it('keeps the stored reference levels when a later push omits them', async () => {
+    await upsertWaterLevel(pool, { ...base, alertLevel: 5, evacuationLevel: 5.3 });
+    await upsertWaterLevel(pool, { ...base, level: 3.1 });
+
+    const stored = await getWaterLevel(pool, 'rosario');
+
+    expect(stored?.level).toBe(3.1);
+    expect(stored?.alertLevel).toBe(5);
+  });
+});

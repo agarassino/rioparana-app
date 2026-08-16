@@ -42,6 +42,8 @@ export async function refreshRiverFromIndex(
           trend: reading.trend,
           changeRate: reading.changeRate,
           timestamp: reading.timestamp,
+          alertLevel: reading.alertLevel,
+          evacuationLevel: reading.evacuationLevel,
         });
         updated++;
       } catch (err) {

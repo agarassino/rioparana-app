@@ -29,6 +29,10 @@ const riverIngestBody = z.object({
   trend: z.enum(['rising', 'falling', 'stable']),
   changeRate: z.number().finite(),
   timestamp: z.string().datetime(),
+  // Reference heights published alongside the reading. Optional so an older
+  // client that does not send them still ingests.
+  alertLevel: z.number().finite().optional(),
+  evacuationLevel: z.number().finite().optional(),
 });
 // A client that scrapes the index page holds every station at once, so it
 // pushes them in one request instead of one per station.

@@ -19,6 +19,10 @@ export interface IndexReading {
   trend: Trend;
   changeRate: number;
   timestamp: string;
+  // Reference heights published per station. They turn a bare reading into
+  // something a reader can act on: how far the river is from flooding.
+  alertLevel?: number;
+  evacuationLevel?: number;
 }
 
 function field(row: string, label: string): string | null {
@@ -66,6 +70,8 @@ export function parseRiverIndex(html: string): IndexReading[] {
     if (!timestamp) continue;
 
     const variation = Number.parseFloat(field(row, 'Variacion') ?? '');
+    const alertLevel = Number.parseFloat(field(row, 'Alerta:') ?? '');
+    const evacuationLevel = Number.parseFloat(field(row, 'Evacuación:') ?? '');
 
     readings.push({
       code,
@@ -76,6 +82,8 @@ export function parseRiverIndex(html: string): IndexReading[] {
       // Stored in centimetres, matching what the per-station scraper produces.
       changeRate: Number.isFinite(variation) ? variation * 100 : 0,
       timestamp,
+      ...(Number.isFinite(alertLevel) ? { alertLevel } : {}),
+      ...(Number.isFinite(evacuationLevel) ? { evacuationLevel } : {}),
     });
   }
 

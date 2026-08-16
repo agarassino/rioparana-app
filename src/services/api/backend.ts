@@ -55,12 +55,15 @@ export async function getBackendLevel(stationId: string): Promise<WaterLevel | n
     const data: unknown = await response.json();
     if (!isStoredLevel(data, stationId)) return null;
 
+    const raw = data as StoredLevel & { alertLevel?: unknown; evacuationLevel?: unknown };
     return {
       stationId: data.stationId,
       level: data.level,
       trend: data.trend,
       changeRate: data.changeRate,
       timestamp: new Date(data.timestamp),
+      ...(isFiniteNumber(raw.alertLevel) ? { alertLevel: raw.alertLevel } : {}),
+      ...(isFiniteNumber(raw.evacuationLevel) ? { evacuationLevel: raw.evacuationLevel } : {}),
     };
   } catch {
     return null;
@@ -233,6 +236,10 @@ export async function pushBackendLevels(levels: WaterLevel[]): Promise<void> {
           trend: level.trend,
           changeRate: level.changeRate,
           timestamp: level.timestamp.toISOString(),
+          ...(level.alertLevel !== undefined ? { alertLevel: level.alertLevel } : {}),
+          ...(level.evacuationLevel !== undefined
+            ? { evacuationLevel: level.evacuationLevel }
+            : {}),
         })),
       }),
       signal: timeout.signal,

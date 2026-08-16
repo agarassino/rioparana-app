@@ -3,6 +3,7 @@ import { useLocalSearchParams, Stack } from 'expo-router';
 import { FontAwesome6 } from '@expo/vector-icons';
 
 import { Card, Badge } from '../../src/components/ui';
+import { RiverAlert } from '../../src/components/RiverAlert';
 import { useWaterLevel, useWeather } from '../../src/hooks';
 import { getStationById } from '../../src/config/stations';
 import { calculateFishingCondition } from '../../src/services/api/riverApi';
@@ -100,6 +101,7 @@ export default function StationDetailScreen() {
                   </Text>
                 </View>
               </View>
+              <RiverAlert level={waterLevel} />
               <Text style={styles.timestamp}>
                 Actualizado: {format(waterLevel.timestamp, "d 'de' MMMM, HH:mm", { locale: es })}
               </Text>

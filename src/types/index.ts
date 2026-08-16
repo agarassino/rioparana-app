@@ -14,6 +14,9 @@ export interface WaterLevel {
   level: number;
   trend: 'rising' | 'falling' | 'stable';
   changeRate: number;
+  // Alturas a las que Prefectura declara alerta y evacuación en la estación.
+  alertLevel?: number;
+  evacuationLevel?: number;
 }
 
 // Tipos para clima

@@ -6,6 +6,9 @@ export interface WaterLevel {
   trend: Trend;
   changeRate: number;
   timestamp: string; // ISO 8601
+  // Heights at which Prefectura declares alert and evacuation for the station.
+  alertLevel?: number;
+  evacuationLevel?: number;
 }
 
 export interface StoredWaterLevel extends WaterLevel {
