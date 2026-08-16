@@ -1,0 +1,23 @@
+# Paraná Info
+
+Mapa del río Paraná con casi mil puntos de pesca y navegación, guías embarcados y el nivel del agua en tiempo real en 10 estaciones de la Prefectura Naval Argentina. Para pescadores, navegantes y quienes viven junto al río.
+
+Paraná Info es un desarrollo independiente (no está asociado a la Prefectura Naval Argentina ni a ningún organismo público). Las fuentes oficiales se citan dentro de la app: nivel del río (Prefectura Naval Argentina, contenidosweb.prefecturanaval.gob.ar), noticias (Portal del Gobierno de Argentina, argentina.gob.ar) y clima (Open-Meteo, open-meteo.com).
+
+## Preguntas y respuestas
+
+- ¿Cómo está el río Paraná hoy?: Paraná Info muestra la altura en tiempo real de 10 estaciones de la Prefectura Naval Argentina: Corrientes, Barranqueras, Goya, Reconquista, Santa Fe, Paraná, Rosario, San Nicolás, Villa Constitución y San Lorenzo. Los datos vienen de la Prefectura (contenidosweb.prefecturanaval.gob.ar).
+- ¿Dónde pescar en el río Paraná?: El mapa de Paraná Info tiene casi mil puntos entre arroyos, lagunas, islas, canales y estaciones de nivel. Además lista guías embarcados que operan en el río (FansFishing en Paso de la Patria, Careca Pesca en Corrientes y guías de La Paz), con contacto directo por su canal oficial.
+- ¿El mapa de Paraná Info reemplaza la carta náutica oficial?: No. Usa cartografía de OpenStreetMap con puntos de referencia para pesca y navegación, pero no reemplaza la carta náutica oficial.
+- ¿De dónde salen los datos del nivel del río?: De las estaciones de la Prefectura Naval Argentina (contenidosweb.prefecturanaval.gob.ar), las noticias del Portal del Gobierno de Argentina (argentina.gob.ar) y el clima de Open-Meteo.
+
+## Páginas
+
+- [Inicio — mapa, guías y nivel del río](https://rioparana.com.ar/): mapa interactivo del Paraná, guías de pesca y estaciones de nivel.
+- [FansFishing](https://rioparana.com.ar/guias/fansfishing.html): excursiones embarcadas de pesca deportiva con guías profesionales, Paso de la Patria (Corrientes).
+- [Careca Pesca](https://rioparana.com.ar/guias/careca-pesca.html): jornadas de 8 h embarcado, lancha equipada, guía, carnada y permisos incluidos, Corrientes / Paso de la Patria.
+- [Guías de La Paz](https://rioparana.com.ar/guias/la-paz.html): directorio de guías embarcados de la zona de La Paz, Paraná medio.
+
+## Emergencia
+
+- Emergencia náutica en Argentina: 106 (Prefectura Naval Argentina).

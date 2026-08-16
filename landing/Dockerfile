@@ -13,5 +13,6 @@ COPY tokens.css /usr/share/nginx/html/tokens.css
 COPY site.css /usr/share/nginx/html/site.css
 COPY sitemap.xml /usr/share/nginx/html/sitemap.xml
 COPY robots.txt /usr/share/nginx/html/robots.txt
+COPY llms.txt /usr/share/nginx/html/llms.txt
 COPY guias /usr/share/nginx/html/guias
 EXPOSE 80
