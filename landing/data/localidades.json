@@ -1,0 +1,382 @@
+[
+  {
+    "slug": "puerto-libertad",
+    "nombre": "Puerto Libertad",
+    "provincia": "Misiones",
+    "lat": -25.9167,
+    "lon": -54.6167,
+    "estacion": "libertad",
+    "alerta": 29.0,
+    "evacuacion": 31.0
+  },
+  {
+    "slug": "eldorado",
+    "nombre": "Eldorado",
+    "provincia": "Misiones",
+    "lat": -26.3667,
+    "lon": -54.65,
+    "estacion": "eldorado",
+    "alerta": 23.0,
+    "evacuacion": 25.0
+  },
+  {
+    "slug": "santa-ana",
+    "nombre": "Santa Ana",
+    "provincia": "Misiones",
+    "lat": -27.3667,
+    "lon": -55.5833,
+    "estacion": "santa-ana",
+    "alerta": 9.3,
+    "evacuacion": 9.8
+  },
+  {
+    "slug": "posadas",
+    "nombre": "Posadas",
+    "provincia": "Misiones",
+    "lat": -27.3667,
+    "lon": -55.8967,
+    "estacion": "posadas",
+    "alerta": 11.0,
+    "evacuacion": 12.0
+  },
+  {
+    "slug": "ituzaingo",
+    "nombre": "Ituzaingó",
+    "provincia": "Corrientes",
+    "lat": -27.5833,
+    "lon": -56.6833,
+    "estacion": "ituzaingo",
+    "alerta": 3.5,
+    "evacuacion": 4.0
+  },
+  {
+    "slug": "ita-ibate",
+    "nombre": "Itá Ibaté",
+    "provincia": "Corrientes",
+    "lat": -27.4333,
+    "lon": -57.3333,
+    "estacion": "ita-ibate",
+    "alerta": 7.0,
+    "evacuacion": 7.5
+  },
+  {
+    "slug": "itati",
+    "nombre": "Itatí",
+    "provincia": "Corrientes",
+    "lat": -27.2667,
+    "lon": -58.25,
+    "estacion": "itati",
+    "alerta": 6.8,
+    "evacuacion": 7.5
+  },
+  {
+    "slug": "paso-de-la-patria",
+    "nombre": "Paso de la Patria",
+    "provincia": "Corrientes",
+    "lat": -27.3167,
+    "lon": -58.5667,
+    "estacion": "paso-de-la-patria",
+    "alerta": 6.5,
+    "evacuacion": 7.0
+  },
+  {
+    "slug": "corrientes",
+    "nombre": "Corrientes",
+    "provincia": "Corrientes",
+    "lat": -27.4667,
+    "lon": -58.8333,
+    "estacion": "corrientes",
+    "alerta": 6.5,
+    "evacuacion": 7.0
+  },
+  {
+    "slug": "barranqueras",
+    "nombre": "Barranqueras",
+    "provincia": "Chaco",
+    "lat": -27.4833,
+    "lon": -58.9333,
+    "estacion": "barranqueras",
+    "alerta": 6.0,
+    "evacuacion": 6.5
+  },
+  {
+    "slug": "empedrado",
+    "nombre": "Empedrado",
+    "provincia": "Corrientes",
+    "lat": -27.95,
+    "lon": -58.8,
+    "estacion": "empedrado",
+    "alerta": 6.5,
+    "evacuacion": 7.0
+  },
+  {
+    "slug": "bella-vista",
+    "nombre": "Bella Vista",
+    "provincia": "Corrientes",
+    "lat": -28.5167,
+    "lon": -59.0333,
+    "estacion": "bella-vista",
+    "alerta": 6.0,
+    "evacuacion": 6.4
+  },
+  {
+    "slug": "goya",
+    "nombre": "Goya",
+    "provincia": "Corrientes",
+    "lat": -29.1333,
+    "lon": -59.2667,
+    "estacion": "goya",
+    "alerta": 5.2,
+    "evacuacion": 5.7
+  },
+  {
+    "slug": "reconquista",
+    "nombre": "Reconquista",
+    "provincia": "Santa Fe",
+    "lat": -29.15,
+    "lon": -59.65,
+    "estacion": "reconquista",
+    "alerta": 5.1,
+    "evacuacion": 5.3
+  },
+  {
+    "slug": "esquina",
+    "nombre": "Esquina",
+    "provincia": "Corrientes",
+    "lat": -30.0167,
+    "lon": -59.5333,
+    "estacion": "esquina",
+    "alerta": 5.0,
+    "evacuacion": 5.4
+  },
+  {
+    "slug": "la-paz",
+    "nombre": "La Paz",
+    "provincia": "Entre Ríos",
+    "lat": -30.75,
+    "lon": -59.65,
+    "estacion": "la-paz",
+    "alerta": 5.8,
+    "evacuacion": 6.15
+  },
+  {
+    "slug": "santa-elena",
+    "nombre": "Santa Elena",
+    "provincia": "Entre Ríos",
+    "lat": -30.95,
+    "lon": -59.7833,
+    "estacion": "santa-elena",
+    "alerta": 6.9,
+    "evacuacion": 7.25
+  },
+  {
+    "slug": "hernandarias",
+    "nombre": "Hernandarias",
+    "provincia": "Entre Ríos",
+    "lat": -31.2333,
+    "lon": -59.9833,
+    "estacion": "hernandarias",
+    "alerta": 5.5,
+    "evacuacion": 6.0
+  },
+  {
+    "slug": "parana",
+    "nombre": "Paraná",
+    "provincia": "Entre Ríos",
+    "lat": -31.7333,
+    "lon": -60.5167,
+    "estacion": "parana",
+    "alerta": 4.7,
+    "evacuacion": 5.0
+  },
+  {
+    "slug": "santa-fe",
+    "nombre": "Santa Fe",
+    "provincia": "Santa Fe",
+    "lat": -31.6333,
+    "lon": -60.7,
+    "estacion": "santa-fe",
+    "alerta": 5.3,
+    "evacuacion": 5.7
+  },
+  {
+    "slug": "diamante",
+    "nombre": "Diamante",
+    "provincia": "Entre Ríos",
+    "lat": -32.0667,
+    "lon": -60.65,
+    "estacion": "diamante",
+    "alerta": 5.3,
+    "evacuacion": 5.5
+  },
+  {
+    "slug": "victoria",
+    "nombre": "Victoria",
+    "provincia": "Entre Ríos",
+    "lat": -32.6167,
+    "lon": -60.15,
+    "estacion": "victoria",
+    "alerta": 4.6,
+    "evacuacion": 4.9
+  },
+  {
+    "slug": "san-lorenzo",
+    "nombre": "San Lorenzo",
+    "provincia": "Santa Fe",
+    "lat": -32.75,
+    "lon": -60.7333,
+    "estacion": "san-lorenzo",
+    "alerta": 5.2,
+    "evacuacion": 5.7
+  },
+  {
+    "slug": "rosario",
+    "nombre": "Rosario",
+    "provincia": "Santa Fe",
+    "lat": -32.95,
+    "lon": -60.65,
+    "estacion": "rosario",
+    "alerta": 5.0,
+    "evacuacion": 5.3
+  },
+  {
+    "slug": "villa-constitucion",
+    "nombre": "Villa Constitución",
+    "provincia": "Santa Fe",
+    "lat": -33.2333,
+    "lon": -60.3333,
+    "estacion": "villa-constitucion",
+    "alerta": 4.0,
+    "evacuacion": 4.5
+  },
+  {
+    "slug": "san-nicolas",
+    "nombre": "San Nicolás",
+    "provincia": "Buenos Aires",
+    "lat": -33.3333,
+    "lon": -60.2167,
+    "estacion": "san-nicolas",
+    "alerta": 4.2,
+    "evacuacion": 5.0
+  },
+  {
+    "slug": "ramallo",
+    "nombre": "Ramallo",
+    "provincia": "Buenos Aires",
+    "lat": -33.4833,
+    "lon": -60.0,
+    "estacion": "ramallo",
+    "alerta": 3.5,
+    "evacuacion": 4.0
+  },
+  {
+    "slug": "san-pedro",
+    "nombre": "San Pedro",
+    "provincia": "Buenos Aires",
+    "lat": -33.6833,
+    "lon": -59.6667,
+    "estacion": "san-pedro",
+    "alerta": 3.4,
+    "evacuacion": 3.6
+  },
+  {
+    "slug": "baradero",
+    "nombre": "Baradero",
+    "provincia": "Buenos Aires",
+    "lat": -33.8,
+    "lon": -59.5,
+    "estacion": "baradero",
+    "alerta": 2.7,
+    "evacuacion": 3.1
+  },
+  {
+    "slug": "zarate",
+    "nombre": "Zárate",
+    "provincia": "Buenos Aires",
+    "lat": -34.1,
+    "lon": -59.0333,
+    "estacion": "zarate",
+    "alerta": 2.2,
+    "evacuacion": 2.4
+  },
+  {
+    "slug": "campana",
+    "nombre": "Campana",
+    "provincia": "Buenos Aires",
+    "lat": -34.1667,
+    "lon": -58.95,
+    "estacion": "campana",
+    "alerta": 2.2,
+    "evacuacion": 2.45
+  },
+  {
+    "slug": "escobar",
+    "nombre": "Escobar",
+    "provincia": "Buenos Aires",
+    "lat": -34.35,
+    "lon": -58.7833,
+    "estacion": "escobar",
+    "alerta": 3.0,
+    "evacuacion": 3.5
+  },
+  {
+    "slug": "isla-martin-garcia",
+    "nombre": "Isla Martín García",
+    "provincia": "Buenos Aires",
+    "lat": -34.1833,
+    "lon": -58.25,
+    "estacion": "martin-garcia",
+    "alerta": 2.5,
+    "evacuacion": 5.0
+  },
+  {
+    "slug": "dique-lujan",
+    "nombre": "Dique Luján",
+    "provincia": "Buenos Aires",
+    "lat": -34.3667,
+    "lon": -58.6667,
+    "estacion": "dique-lujan",
+    "alerta": 2.3,
+    "evacuacion": 2.8
+  },
+  {
+    "slug": "tigre",
+    "nombre": "Tigre",
+    "provincia": "Buenos Aires",
+    "lat": -34.4167,
+    "lon": -58.5833,
+    "estacion": "tigre",
+    "alerta": 3.3,
+    "evacuacion": 3.8
+  },
+  {
+    "slug": "san-fernando",
+    "nombre": "San Fernando",
+    "provincia": "Buenos Aires",
+    "lat": -34.4333,
+    "lon": -58.5667,
+    "estacion": "san-fernando",
+    "alerta": 3.0,
+    "evacuacion": 3.5
+  },
+  {
+    "slug": "san-isidro",
+    "nombre": "San Isidro",
+    "provincia": "Buenos Aires",
+    "lat": -34.4667,
+    "lon": -58.5167,
+    "estacion": "san-isidro",
+    "alerta": 3.0,
+    "evacuacion": 3.5
+  },
+  {
+    "slug": "olivos",
+    "nombre": "Olivos",
+    "provincia": "Buenos Aires",
+    "lat": -34.5,
+    "lon": -58.4833,
+    "estacion": "olivos",
+    "alerta": 3.0,
+    "evacuacion": 3.8
+  }
+]

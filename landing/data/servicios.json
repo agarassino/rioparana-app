@@ -1,0 +1,20 @@
+[
+  {
+    "id": "careca-pesca",
+    "nombre": "Careca Pesca",
+    "tipo": "guia-pesca",
+    "localidad": "corrientes",
+    "contacto": "https://carecapesca.com/",
+    "ficha": "/guias/careca-pesca.html",
+    "fuente": "Sitio propio del prestador"
+  },
+  {
+    "id": "fansfishing",
+    "nombre": "FansFishing",
+    "tipo": "guia-pesca",
+    "localidad": "paso-de-la-patria",
+    "contacto": "https://www.fansfishing.com/",
+    "ficha": "/guias/fansfishing.html",
+    "fuente": "Sitio propio del prestador"
+  }
+]

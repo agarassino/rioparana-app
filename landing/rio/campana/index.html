@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Campana, Buenos Aires — río Paraná, altura y servicios | Paraná Info</title>
+<meta name="description" content="Altura del río Paraná en Campana, Buenos Aires.">
+<link rel="canonical" href="https://rioparana.com.ar/rio/campana/">
+<link rel="stylesheet" href="/tokens.css">
+<link rel="stylesheet" href="/site.css">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Place","name":"Campana","address":{"@type":"PostalAddress","addressLocality":"Campana","addressRegion":"Buenos Aires","addressCountry":"AR"},"geo":{"@type":"GeoCoordinates","latitude":-34.1667,"longitude":-58.95}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Paraná Info","item":"https://rioparana.com.ar"},{"@type":"ListItem","position":2,"name":"Localidades","item":"https://rioparana.com.ar/rio/"},{"@type":"ListItem","position":3,"name":"Campana","item":"https://rioparana.com.ar/rio/campana/"}]}</script>
+</head>
+<body>
+<header class="masthead"><div class="masthead-inner wrap">
+  <a class="wordmark" href="/">Paraná Info</a>
+</div></header>
+<main class="wrap" style="padding-top:2rem">
+  <nav class="crumbs"><a href="/">Inicio</a> › <a href="/rio/">Localidades</a> › Campana</nav>
+
+  <h1>Campana, Buenos Aires</h1>
+
+  <section class="river-now">
+    <h2>El río hoy</h2>
+    <p class="river-figure"><span id="river-now" class="st-level">—</span></p>
+    <p id="river-src" class="stations-note" hidden>Medición de la Prefectura Naval Argentina en Campana.</p>
+  </section>
+
+  <section>
+    <p class="lede">Campana, Buenos Aires. Sobre el Delta del Paraná. La Prefectura mide la altura del río acá mismo, con alerta en 2.20 m y evacuación en 2.45 m.</p>
+  </section>
+
+
+  <nav class="river-nav">
+    <a href="/rio/zarate/">← Río arriba: Zárate</a>
+    <a href="/rio/isla-martin-garcia/">Río abajo: Isla Martín García →</a>
+  </nav>
+</main>
+
+<script>
+(function(){
+  var el = document.getElementById('river-now');
+  if (!el) return;
+  fetch('https://api.rioparana.com.ar/public/river', { headers: { Accept: 'application/json' } })
+    .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+    .then(function(rows){
+      var r = rows.filter(function(x){ return x.stationId === "campana"; })[0];
+      if (!r) return;
+      var txt = r.level.toFixed(2) + ' m';
+      if (typeof r.alertLevel === 'number') {
+        var d = r.alertLevel - r.level;
+        txt += d >= 0
+          ? ' · a ' + d.toFixed(2) + ' m del nivel de alerta'
+          : ' · supera el nivel de alerta';
+      }
+      el.textContent = txt;
+      el.setAttribute('data-state', typeof r.alertLevel === 'number' && r.alertLevel - r.level <= 1 ? 'near-alert' : 'live');
+      var src = document.getElementById('river-src');
+      if (src) src.hidden = false;
+    })
+    .catch(function(){});
+})();
+</script>
+
+<footer class="wrap" style="padding:2rem 0">
+  <p><a href="/">Volver a Paraná Info</a></p>
+  <p class="disclaimer">Alturas: información pública de la Prefectura Naval Argentina.
+  Paraná Info es una aplicación independiente y no está afiliada a ningún organismo público.
+  Los servicios listados enlazan a su contacto público; no republicamos sus datos.</p>
+</footer>
+</body>
+</html>

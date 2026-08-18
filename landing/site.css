@@ -325,3 +325,30 @@ a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visibl
   border-radius: var(--radius-sm, 4px); padding: 1px 6px; }
 .stations-note { margin-top: var(--space-sm); font-family: var(--font-mono); font-size: var(--text-sm);
   color: var(--color-muted); }
+
+/* ---------- LOCALITY DIRECTORY ---------- */
+.river-now { border-top: var(--rule-bold) solid var(--color-rule);
+  border-bottom: var(--rule-hair) solid var(--color-rule);
+  padding: var(--space-md) 0; margin: var(--space-lg) 0; }
+.river-now h2 { font-size: var(--text-sm); text-transform: uppercase; letter-spacing: .08em;
+  color: var(--color-muted); margin: 0 0 var(--space-2xs); }
+.river-figure { margin: 0; font-family: var(--font-display); font-size: var(--text-2xl);
+  color: var(--color-ink); font-variant-numeric: tabular-nums; }
+.river-figure .st-level[data-state="near-alert"] { color: var(--color-emergency); }
+
+.svc-list { list-style: none; padding: 0; margin: var(--space-sm) 0 0; }
+.svc-list li { padding: 10px 0; border-bottom: var(--rule-hair) solid var(--color-rule);
+  font-family: var(--font-mono); font-size: var(--text-sm); }
+
+.stations-grid { list-style: none; padding: 0; margin: var(--space-md) 0 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: 0;
+  border-top: var(--rule-hair) solid var(--color-rule); border-left: var(--rule-hair) solid var(--color-rule); }
+.stations-grid li { padding: 11px 14px; font-family: var(--font-mono); font-size: var(--text-sm);
+  border-bottom: var(--rule-hair) solid var(--color-rule); border-right: var(--rule-hair) solid var(--color-rule); }
+
+.muted { color: var(--color-muted); }
+
+.river-nav { display: flex; justify-content: space-between; gap: var(--space-md);
+  margin: var(--space-xl) 0; padding-top: var(--space-md);
+  border-top: var(--rule-hair) solid var(--color-rule);
+  font-family: var(--font-mono); font-size: var(--text-sm); }
