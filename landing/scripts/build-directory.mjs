@@ -192,13 +192,13 @@ function typePage(tipo) {
   const label = tipoLabel(tipo);
   const jsonld = [{ '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
     { '@type': 'ListItem', position: 1, name: 'Paraná Info', item: SITE },
-    { '@type': 'ListItem', position: 2, name: label.titulo, item: `${SITE}/${tipo}/` },
+    { '@type': 'ListItem', position: 2, name: label.titulo, item: `${SITE}/servicios/${tipo}/` },
   ] }];
 
   return head({
     title: `${label.titulo} en el río Paraná | Paraná Info`,
     description: `${label.titulo} sobre el río Paraná, por localidad.`,
-    canonical: `${SITE}/${tipo}/`, jsonld,
+    canonical: `${SITE}/servicios/${tipo}/`, jsonld,
   }) + `
 <main class="wrap" style="padding-top:2rem">
   <nav class="crumbs"><a href="/">Inicio</a> › ${esc(label.titulo)}</nav>
@@ -219,7 +219,9 @@ function write(path, html) {
 }
 
 // Regenerate from scratch so a locality removed from the data disappears.
-if (existsSync(join(ROOT, 'rio'))) rmSync(join(ROOT, 'rio'), { recursive: true });
+for (const dir of ['rio', 'servicios']) {
+  if (existsSync(join(ROOT, dir))) rmSync(join(ROOT, dir), { recursive: true });
+}
 
 const urls = [`${SITE}/`, `${SITE}/rio/`];
 write('rio/index.html', indexPage());
@@ -232,8 +234,8 @@ for (const loc of published) {
 for (const t of tipos()) {
   const html = typePage(t);
   if (!html) continue;
-  write(`${t}/index.html`, html);
-  urls.push(`${SITE}/${t}/`);
+  write(`servicios/${t}/index.html`, html);
+  urls.push(`${SITE}/servicios/${t}/`);
 }
 
 for (const g of ['fansfishing', 'careca-pesca', 'la-paz']) urls.push(`${SITE}/guias/${g}.html`);
