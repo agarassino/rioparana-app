@@ -4,9 +4,9 @@
     "nombre": "Careca Pesca",
     "tipo": "guia-pesca",
     "localidad": "corrientes",
-    "contacto": "https://carecapesca.com/",
+    "contacto": "https://wa.me/5493624700632",
     "ficha": "/guias/careca-pesca.html",
-    "fuente": "Sitio propio del prestador"
+    "fuente": "Contacto público de su propia ficha. Su sitio carecapesca.com dejó de responder (verificado 2026-08-27)"
   },
   {
     "id": "fansfishing",
@@ -56,5 +56,37 @@
     "localidad": "parana",
     "contacto": "https://www.instagram.com/sup_parana/",
     "fuente": "parana.tur.ar (turismo municipal): Balneario Municipal, costanera de Paraná"
+  },
+  {
+    "id": "la-regina-lodge",
+    "nombre": "La Regina Lodge",
+    "tipo": "lodge",
+    "localidad": "itati",
+    "contacto": "https://www.lareginalodge.com.ar/",
+    "fuente": "Sitio propio: Ruta 12 km 1125, Itatí, Corrientes"
+  },
+  {
+    "id": "the-itati-lodge",
+    "nombre": "The Itatí Lodge",
+    "tipo": "lodge",
+    "localidad": "itati",
+    "contacto": "http://www.theitatilodge.com/",
+    "fuente": "Sitio propio: lodge de pesca de dorado sobre el Alto Paraná, Itatí, Corrientes"
+  },
+  {
+    "id": "contenido-nautico",
+    "nombre": "Contenido Náutico",
+    "tipo": "escuela-navegacion",
+    "localidad": "san-fernando",
+    "contacto": "https://www.contenidonautico.com.ar/",
+    "fuente": "Sitio propio: sede en Bulevar de la Ribera 55, San Fernando; habilitada por Prefectura"
+  },
+  {
+    "id": "santino-pesca",
+    "nombre": "Santino Pesca",
+    "tipo": "guia-pesca",
+    "localidad": "paso-de-la-patria",
+    "contacto": "https://santinopesca.com/",
+    "fuente": "Sitio propio: guías embarcados en Paso de la Patria, Corrientes"
   }
 ]
