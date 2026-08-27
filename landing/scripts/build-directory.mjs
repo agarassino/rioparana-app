@@ -246,4 +246,19 @@ writeFileSync(join(ROOT, 'sitemap.xml'),
   urls.map((u) => `  <url><loc>${u}</loc></url>`).join('\n') +
   `\n</urlset>\n`);
 
+// The home page is hand-maintained, but its station list has to stay in step
+// with the directory: those are the links that let a crawler reach every
+// locality page from the one page it already knows.
+const homePath = join(ROOT, 'index.html');
+const home = readFileSync(homePath, 'utf8');
+const items = published
+  .filter((l) => l.estacion)
+  .map((l) =>
+    `<li data-station="${l.estacion}"><a class="st-name" href="/rio/${l.slug}/">${esc(l.nombre)}</a>` +
+    `<span class="st-level" data-fallback="—">—</span></li>`)
+  .join('');
+const patched = home.replace(/<ul id="station-list">[\s\S]*?<\/ul>/, `<ul id="station-list">${items}</ul>`);
+if (patched === home) console.warn('AVISO: no se encontró #station-list en index.html');
+else writeFileSync(homePath, patched);
+
 console.log(`${published.length} localidades, ${servicios.length} servicios, ${urls.length} URLs en el sitemap`);
