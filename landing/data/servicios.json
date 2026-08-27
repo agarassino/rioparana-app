@@ -16,5 +16,45 @@
     "contacto": "https://www.fansfishing.com/",
     "ficha": "/guias/fansfishing.html",
     "fuente": "Sitio propio del prestador"
+  },
+  {
+    "id": "delta-kayaking",
+    "nombre": "Delta Kayaking",
+    "tipo": "escuela-kayak",
+    "localidad": "san-fernando",
+    "contacto": "https://deltakayaking.com.ar/",
+    "fuente": "Sitio propio: base en arroyo Gutiérrez, punto de encuentro en el muelle público de San Fernando"
+  },
+  {
+    "id": "kayak-rio-de-la-plata",
+    "nombre": "Kayak Río de la Plata",
+    "tipo": "escuela-kayak",
+    "localidad": "san-fernando",
+    "contacto": "https://kayakriodelaplata.com.ar/",
+    "fuente": "Sitio propio: Boulevard de la Ribera 55, San Fernando"
+  },
+  {
+    "id": "delta-en-kayak",
+    "nombre": "Delta en Kayak",
+    "tipo": "escuela-kayak",
+    "localidad": "tigre",
+    "contacto": "https://www.deltaenkayak.com.ar/",
+    "fuente": "Sitio propio: sede en río Sarmiento, salida desde Lavalle 50, Tigre"
+  },
+  {
+    "id": "india-paddle-surf",
+    "nombre": "INDIA Paddle Surf",
+    "tipo": "escuela-paddle",
+    "localidad": "rosario",
+    "contacto": "https://www.facebook.com/indiapaddlesurf/",
+    "fuente": "Página oficial: Complejo Florida Río, Rosario"
+  },
+  {
+    "id": "sup-parana",
+    "nombre": "SUP Paraná",
+    "tipo": "escuela-paddle",
+    "localidad": "parana",
+    "contacto": "https://www.instagram.com/sup_parana/",
+    "fuente": "parana.tur.ar (turismo municipal): Balneario Municipal, costanera de Paraná"
   }
 ]

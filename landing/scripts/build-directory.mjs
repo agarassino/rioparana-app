@@ -257,8 +257,13 @@ const items = published
     `<li data-station="${l.estacion}"><a class="st-name" href="/rio/${l.slug}/">${esc(l.nombre)}</a>` +
     `<span class="st-level" data-fallback="—">—</span></li>`)
   .join('');
-const patched = home.replace(/<ul id="station-list">[\s\S]*?<\/ul>/, `<ul id="station-list">${items}</ul>`);
-if (patched === home) console.warn('AVISO: no se encontró #station-list en index.html');
-else writeFileSync(homePath, patched);
+const listPattern = /<ul id="station-list">[\s\S]*?<\/ul>/;
+if (!listPattern.test(home)) {
+  // Comparing the result would report a false miss whenever the list is
+  // already up to date, which is the common case.
+  console.warn('AVISO: no se encontró #station-list en index.html');
+} else {
+  writeFileSync(homePath, home.replace(listPattern, `<ul id="station-list">${items}</ul>`));
+}
 
 console.log(`${published.length} localidades, ${servicios.length} servicios, ${urls.length} URLs en el sitemap`);
