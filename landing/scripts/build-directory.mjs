@@ -52,6 +52,7 @@ function head({ title, description, canonical, jsonld }) {
 <link rel="canonical" href="${canonical}">
 <link rel="stylesheet" href="/tokens.css">
 <link rel="stylesheet" href="/site.css">
+<script defer src="/analytics.js"></script>
 ${jsonld.map((b) => `<script type="application/ld+json">${JSON.stringify(b)}</script>`).join('\n')}
 </head>
 <body>
