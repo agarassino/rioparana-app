@@ -60,8 +60,20 @@ jobs:
           echo "landing=$landing" >> "$GITHUB_OUTPUT"
           echo "backend=$backend landing=$landing"
 
+      - name: ¿Están los secrets?
+        id: secrets
+        env:
+          HAS: ${{ secrets.COOLIFY_TOKEN != '' && secrets.TS_OAUTH_CLIENT_ID != '' && secrets.TS_OAUTH_SECRET != '' }}
+        run: echo "ready=$HAS" >> "$GITHUB_OUTPUT"
+
+      - name: Faltan secrets
+        if: steps.secrets.outputs.ready != 'true' && (steps.changed.outputs.backend == 'true' || steps.changed.outputs.landing == 'true')
+        run: |
+          echo "::warning::Sin desplegar: faltan COOLIFY_TOKEN, TS_OAUTH_CLIENT_ID o TS_OAUTH_SECRET."
+          echo "Ver docs/deploy-automatico.md. Desplegar a mano mientras tanto."
+
       - name: Conectar a la tailnet
-        if: steps.changed.outputs.backend == 'true' || steps.changed.outputs.landing == 'true'
+        if: steps.secrets.outputs.ready == 'true' && (steps.changed.outputs.backend == 'true' || steps.changed.outputs.landing == 'true')
         uses: tailscale/github-action@v3
         with:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
@@ -69,13 +81,13 @@ jobs:
           tags: tag:ci
 
       - name: Desplegar backend
-        if: steps.changed.outputs.backend == 'true'
+        if: steps.secrets.outputs.ready == 'true' && steps.changed.outputs.backend == 'true'
         env:
           TOKEN: ${{ secrets.COOLIFY_TOKEN }}
         run: ./.github/workflows/deploy.sh t7uqevsj5bex092bqtxqdx86 backend
 
       - name: Desplegar landing
-        if: steps.changed.outputs.landing == 'true'
+        if: steps.secrets.outputs.ready == 'true' && steps.changed.outputs.landing == 'true'
         env:
           TOKEN: ${{ secrets.COOLIFY_TOKEN }}
         run: ./.github/workflows/deploy.sh rkg6wbf01f9vxejoogulbt1n landing

@@ -180,7 +180,8 @@ a { color: inherit; }
 
 /* ---------- STATIONS (tabular almanac data) ---------- */
 .stations ul { list-style: none; padding: 0; margin: var(--space-sm) 0 0;
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: 0;
+  /* Wide enough that "Villa Constitución 2.20 m" fits on one line. */
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: 0;
   border-top: var(--rule-hair) solid var(--color-rule); border-left: var(--rule-hair) solid var(--color-rule); }
 .stations li { font-family: var(--font-mono); font-size: var(--text-sm); color: var(--color-ink); font-weight: 600;
   padding: 11px 14px; border-bottom: var(--rule-hair) solid var(--color-rule); border-right: var(--rule-hair) solid var(--color-rule); }
@@ -321,8 +322,10 @@ a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visibl
 
 /* ---------- LIVE STATION LEVELS ---------- */
 /* Names are static so they stay indexable; the heights arrive from the API. */
-.stations li { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2xs); }
-.st-level { font-variant-numeric: tabular-nums; color: var(--color-muted); font-weight: 600; }
+.stations li { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-sm); }
+.st-level { font-variant-numeric: tabular-nums; color: var(--color-muted); font-weight: 600;
+  /* The reading is one unit: never break "2.20" away from "m". */
+  white-space: nowrap; flex: none; }
 .st-level[data-state="live"] { color: var(--color-accent); }
 .st-level[data-state="near-alert"] { color: var(--color-emergency); }
 .st-level[data-state="alert"],
@@ -358,6 +361,6 @@ a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visibl
   border-top: var(--rule-hair) solid var(--color-rule);
   font-family: var(--font-mono); font-size: var(--text-sm); }
 
-.stations li .st-name { color: var(--color-ink); text-decoration: none;
-  border-bottom: 1px solid var(--color-rule); }
-.stations li .st-name:hover { border-bottom-color: var(--color-accent); color: var(--color-accent); }
+.stations li .st-name { color: var(--color-ink); text-decoration: none; }
+.stations li .st-name:hover { color: var(--color-accent); text-decoration: underline;
+  text-underline-offset: 3px; }
