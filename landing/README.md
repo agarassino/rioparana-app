@@ -54,3 +54,17 @@ Reglas que aplica el script:
 Las alturas de alerta y evacuación viven en `localidades.json` porque son
 valores de referencia estables, y así quedan en el HTML para los buscadores. La
 altura del día la pinta el navegador contra `/public/river`.
+
+### Comprobar los enlaces
+
+```bash
+./scripts/check-links.sh
+```
+
+Recorre `data/servicios.json` y verifica que cada contacto responda. Prueba cada
+URL con user-agent de navegador y sin él, porque varios sitios devuelven 403 o
+406 a un agente que no reconocen y 200 a un navegador: eso es un firewall, no un
+sitio caído.
+
+Conviene correrlo antes de regenerar. Ante un enlace caído, reintentar más tarde
+antes de dar de baja la ficha: una caída puede ser pasajera.

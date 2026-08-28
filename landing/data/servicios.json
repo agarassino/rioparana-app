@@ -34,14 +34,6 @@
     "fuente": "Sitio propio: Boulevard de la Ribera 55, San Fernando"
   },
   {
-    "id": "delta-en-kayak",
-    "nombre": "Delta en Kayak",
-    "tipo": "escuela-kayak",
-    "localidad": "tigre",
-    "contacto": "https://www.deltaenkayak.com.ar/",
-    "fuente": "Sitio propio: sede en río Sarmiento, salida desde Lavalle 50, Tigre"
-  },
-  {
     "id": "india-paddle-surf",
     "nombre": "INDIA Paddle Surf",
     "tipo": "escuela-paddle",
@@ -88,5 +80,37 @@
     "localidad": "paso-de-la-patria",
     "contacto": "https://santinopesca.com/",
     "fuente": "Sitio propio: guías embarcados en Paso de la Patria, Corrientes"
+  },
+  {
+    "id": "don-joaquin-river-lodge",
+    "nombre": "Don Joaquín River Lodge",
+    "tipo": "lodge",
+    "localidad": "esquina",
+    "contacto": "https://donjoaquinriverlodge.com/",
+    "fuente": "Sitio propio: Esquina, Corrientes, en la confluencia del Paraná y el río Corriente"
+  },
+  {
+    "id": "cabanas-de-la-costa-goya",
+    "nombre": "Cabañas de la Costa Fishing Lodge",
+    "tipo": "lodge",
+    "localidad": "goya",
+    "contacto": "https://www.facebook.com/cabadelacostaFLGoya/",
+    "fuente": "Página oficial: Riacho Goya, paraje El Remanso, a 10 km del centro de Goya"
+  },
+  {
+    "id": "club-nautico-leon-sero",
+    "nombre": "Club Náutico León Seró",
+    "tipo": "escuela-kayak",
+    "localidad": "posadas",
+    "contacto": "https://www.instagram.com/club_nautico_leon_sero/",
+    "fuente": "Cuenta oficial. Sede en Urquiza y Tomás Guido, Posadas; afiliado a la Federación Argentina de Canoas"
+  },
+  {
+    "id": "boyando",
+    "nombre": "Boyando",
+    "tipo": "escuela-kayak",
+    "localidad": "rosario",
+    "contacto": "https://boyando.com/",
+    "fuente": "Sitio propio: escuela de kayak en Rosario, Santa Fe"
   }
 ]
