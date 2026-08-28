@@ -1,0 +1,85 @@
+name: deploy
+
+# Coolify lives on a Tailscale address, so GitHub cannot reach it with the
+# usual webhook. The runner joins the tailnet instead and calls the deploy API
+# from inside, which keeps the control plane off the public internet.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Qué desplegar
+        type: choice
+        options: [auto, ambos, backend, landing]
+        default: ambos
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Decidir qué cambió
+        id: changed
+        run: |
+          backend=false
+          landing=false
+          target='${{ inputs.target }}'
+
+          if [ -n "$target" ] && [ "$target" != auto ]; then
+            case "$target" in
+              backend) backend=true ;;
+              landing) landing=true ;;
+              ambos)   backend=true; landing=true ;;
+            esac
+          else
+            # A first push, or a force push, can leave no parent to compare with.
+            if git rev-parse --verify -q HEAD^ >/dev/null; then
+              files=$(git diff --name-only HEAD^ HEAD)
+            else
+              files=$(git ls-files)
+            fi
+            echo "$files" | sed 's/^/  /'
+
+            # Anchored, so a path like docs/server/notes.md does not match.
+            if grep -q '^server/'  <<<"$files"; then backend=true; fi
+            if grep -q '^landing/' <<<"$files"; then landing=true; fi
+          fi
+
+          echo "backend=$backend" >> "$GITHUB_OUTPUT"
+          echo "landing=$landing" >> "$GITHUB_OUTPUT"
+          echo "backend=$backend landing=$landing"
+
+      - name: Conectar a la tailnet
+        if: steps.changed.outputs.backend == 'true' || steps.changed.outputs.landing == 'true'
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Desplegar backend
+        if: steps.changed.outputs.backend == 'true'
+        env:
+          TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+        run: ./.github/workflows/deploy.sh t7uqevsj5bex092bqtxqdx86 backend
+
+      - name: Desplegar landing
+        if: steps.changed.outputs.landing == 'true'
+        env:
+          TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+        run: ./.github/workflows/deploy.sh rkg6wbf01f9vxejoogulbt1n landing
+
+      - name: Nada que desplegar
+        if: steps.changed.outputs.backend != 'true' && steps.changed.outputs.landing != 'true'
+        run: echo "El push no tocó server/ ni landing/. Sin deploy."
