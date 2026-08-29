@@ -6,6 +6,7 @@
 // the numbers stay fresh without regenerating anything.
 
 import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -250,7 +251,16 @@ writeFileSync(join(ROOT, 'sitemap.xml'),
 // with the directory: those are the links that let a crawler reach every
 // locality page from the one page it already knows.
 const homePath = join(ROOT, 'index.html');
-const home = readFileSync(homePath, 'utf8');
+let home = readFileSync(homePath, 'utf8');
+
+// Stamp each screenshot URL with a hash of its bytes. Replacing an image
+// without changing its URL leaves returning visitors on the old one for as
+// long as the cache lasts, which is how the stretched mockups survived a
+// deploy that had already fixed them.
+home = home.replace(/(\/img\/[a-z0-9-]+\.(?:png|webp))(\?v=[a-f0-9]+)?/g, (_m, file) => {
+  const bytes = readFileSync(join(ROOT, file));
+  return `${file}?v=${createHash('sha256').update(bytes).digest('hex').slice(0, 8)}`;
+});
 const items = published
   .filter((l) => l.estacion)
   .map((l) =>
