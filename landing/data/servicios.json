@@ -112,5 +112,37 @@
     "localidad": "rosario",
     "contacto": "https://boyando.com/",
     "fuente": "Sitio propio: escuela de kayak en Rosario, Santa Fe"
+  },
+  {
+    "id": "setubal-kayaks",
+    "nombre": "Setúbal Kayak's",
+    "tipo": "escuela-kayak",
+    "localidad": "santa-fe",
+    "contacto": "https://www.instagram.com/setubal_kayaks/",
+    "fuente": "Cuenta oficial: alquiler, clases y excursiones en la laguna Setúbal, Santa Fe"
+  },
+  {
+    "id": "kayvai",
+    "nombre": "Kayvai",
+    "tipo": "escuela-kayak",
+    "localidad": "santa-fe",
+    "contacto": "https://www.instagram.com/kayvaisantafe/",
+    "fuente": "Cuenta oficial: alquiler de kayaks y travesías náuticas en Santa Fe"
+  },
+  {
+    "id": "nandito-lodge",
+    "nombre": "Nandito Lodge",
+    "tipo": "lodge",
+    "localidad": "la-paz",
+    "contacto": "https://www.nanditolodge.com.ar/",
+    "fuente": "Sitio propio: entre calles Victoria y El Amarillo, La Paz, Entre Ríos"
+  },
+  {
+    "id": "parana-sunrise-lodge",
+    "nombre": "Paraná Sunrise Lodge",
+    "tipo": "lodge",
+    "localidad": "san-javier",
+    "contacto": "https://paranasunrise.com.ar/",
+    "fuente": "Sitio propio: Ruta Provincial 1 km 181, San Javier, Santa Fe"
   }
 ]

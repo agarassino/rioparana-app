@@ -378,5 +378,12 @@
     "estacion": "olivos",
     "alerta": 3.0,
     "evacuacion": 3.8
+  },
+  {
+    "slug": "san-javier",
+    "nombre": "San Javier",
+    "provincia": "Santa Fe",
+    "lat": -30.5833,
+    "lon": -59.9333
   }
 ]
