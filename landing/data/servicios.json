@@ -144,5 +144,13 @@
     "localidad": "san-javier",
     "contacto": "https://paranasunrise.com.ar/",
     "fuente": "Sitio propio: Ruta Provincial 1 km 181, San Javier, Santa Fe"
+  },
+  {
+    "id": "victor-flores",
+    "nombre": "Víctor Flores",
+    "tipo": "guia-pesca",
+    "localidad": "la-paz",
+    "contacto": "https://www.victorflores.com.ar/",
+    "fuente": "Sitio propio: guía de pesca y bungalows en La Paz, Entre Ríos. Un directorio de turismo lo listaba en Victoria; su sitio no menciona Victoria en ninguna parte"
   }
 ]
