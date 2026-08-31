@@ -3,6 +3,7 @@ import {
   getBackendLevel,
   getBackendNews,
   getBackendWeather,
+  pingDevice,
   pushBackendLevels,
 } from '../src/services/api/backend';
 
@@ -261,5 +262,44 @@ describe('reference levels over the shared cache', () => {
 
     expect(level?.level).toBe(3);
     expect(level?.alertLevel).toBeUndefined();
+  });
+});
+
+describe('pingDevice', () => {
+  test('reports the device and the station it is looking at', async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true, json: async () => ({}) }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await pingDevice('11111111-1111-4111-8111-111111111111', 'rosario');
+
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toMatch(/\/devices\/ping$/);
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual({
+      deviceId: '11111111-1111-4111-8111-111111111111',
+      stationId: 'rosario',
+    });
+  });
+
+  test('omits the station when none is open', async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true, json: async () => ({}) }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await pingDevice('11111111-1111-4111-8111-111111111111');
+
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toEqual({
+      deviceId: '11111111-1111-4111-8111-111111111111',
+    });
+  });
+
+  test('never throws, because telemetry must not break a screen', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      throw new Error('network down');
+    }));
+
+    await expect(
+      pingDevice('11111111-1111-4111-8111-111111111111', 'goya')
+    ).resolves.toBeUndefined();
   });
 });

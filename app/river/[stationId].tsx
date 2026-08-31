@@ -4,7 +4,7 @@ import { FontAwesome6 } from '@expo/vector-icons';
 
 import { Card, Badge } from '../../src/components/ui';
 import { RiverAlert } from '../../src/components/RiverAlert';
-import { useWaterLevel, useWeather } from '../../src/hooks';
+import { useWaterLevel, useWeather, useDevicePing } from '../../src/hooks';
 import { getStationById } from '../../src/config/stations';
 import { calculateFishingCondition } from '../../src/services/api/riverApi';
 import { FEATURES } from '../../src/config/features';
@@ -17,6 +17,7 @@ export default function StationDetailScreen() {
   const station = getStationById(stationId || '');
 
   const { data: waterLevel, isLoading: levelLoading } = useWaterLevel(stationId || '');
+  useDevicePing(stationId || undefined);
   const { data: weather, isLoading: weatherLoading } = useWeather(
     station?.latitude || 0,
     station?.longitude || 0

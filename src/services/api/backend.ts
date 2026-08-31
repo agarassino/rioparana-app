@@ -250,3 +250,23 @@ export async function pushBackendLevels(levels: WaterLevel[]): Promise<void> {
     timeout.clear();
   }
 }
+
+// Tells the backend that a device opened the app, and which station it is
+// looking at. It carries a random local identifier and nothing about the
+// person: enough to count devices and see which stations matter, which is the
+// difference between deciding and guessing.
+export async function pingDevice(deviceId: string, stationId?: string): Promise<void> {
+  const timeout = withTimeout(REQUEST_TIMEOUT_MS);
+  try {
+    await fetch(`${API_BASE_URL}/devices/ping`, {
+      method: 'POST',
+      headers: { 'x-api-key': API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify(stationId ? { deviceId, stationId } : { deviceId }),
+      signal: timeout.signal,
+    });
+  } catch {
+    // Telemetry must never break a screen.
+  } finally {
+    timeout.clear();
+  }
+}
