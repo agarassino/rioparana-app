@@ -26,7 +26,7 @@ function stamp(file) {
   const bytes = readFileSync(join(ROOT, file));
   return `${file}?v=${createHash('sha256').update(bytes).digest('hex').slice(0, 8)}`;
 }
-const CSS = { tokens: stamp('/tokens.css'), site: stamp('/site.css') };
+const CSS = { tokens: stamp('/tokens.css'), site: stamp('/site.css'), analytics: stamp('/analytics.js') };
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
   .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -61,7 +61,7 @@ function head({ title, description, canonical, jsonld }) {
 <link rel="canonical" href="${canonical}">
 <link rel="stylesheet" href="${CSS.tokens}">
 <link rel="stylesheet" href="${CSS.site}">
-<script defer src="/analytics.js"></script>
+<script defer src="${CSS.analytics}"></script>
 ${jsonld.map((b) => `<script type="application/ld+json">${JSON.stringify(b)}</script>`).join('\n')}
 </head>
 <body>
@@ -267,7 +267,7 @@ let home = readFileSync(homePath, 'utf8');
 // deploy that had already fixed them.
 // Stylesheets need the same treatment: a CSS fix nobody sees because the old
 // file is still cached is indistinguishable from a fix that did not work.
-home = home.replace(/(\/(?:site|tokens)\.css)(\?v=[a-f0-9]+)?/g, (_m, file) => {
+home = home.replace(/(\/(?:site|tokens)\.css|\/analytics\.js)(\?v=[a-f0-9]+)?/g, (_m, file) => {
   const bytes = readFileSync(join(ROOT, file));
   return `${file}?v=${createHash('sha256').update(bytes).digest('hex').slice(0, 8)}`;
 });
