@@ -20,6 +20,14 @@ const SITE = 'https://rioparana.com.ar';
 const localidades = JSON.parse(readFileSync(join(ROOT, 'data/localidades.json'), 'utf8'));
 const servicios = JSON.parse(readFileSync(join(ROOT, 'data/servicios.json'), 'utf8'));
 
+// Same content hash the home page gets, so a style fix reaches every page
+// instead of waiting behind a cached stylesheet.
+function stamp(file) {
+  const bytes = readFileSync(join(ROOT, file));
+  return `${file}?v=${createHash('sha256').update(bytes).digest('hex').slice(0, 8)}`;
+}
+const CSS = { tokens: stamp('/tokens.css'), site: stamp('/site.css') };
+
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
   .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -51,8 +59,8 @@ function head({ title, description, canonical, jsonld }) {
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
 <link rel="canonical" href="${canonical}">
-<link rel="stylesheet" href="/tokens.css">
-<link rel="stylesheet" href="/site.css">
+<link rel="stylesheet" href="${CSS.tokens}">
+<link rel="stylesheet" href="${CSS.site}">
 <script defer src="/analytics.js"></script>
 ${jsonld.map((b) => `<script type="application/ld+json">${JSON.stringify(b)}</script>`).join('\n')}
 </head>
@@ -257,6 +265,13 @@ let home = readFileSync(homePath, 'utf8');
 // without changing its URL leaves returning visitors on the old one for as
 // long as the cache lasts, which is how the stretched mockups survived a
 // deploy that had already fixed them.
+// Stylesheets need the same treatment: a CSS fix nobody sees because the old
+// file is still cached is indistinguishable from a fix that did not work.
+home = home.replace(/(\/(?:site|tokens)\.css)(\?v=[a-f0-9]+)?/g, (_m, file) => {
+  const bytes = readFileSync(join(ROOT, file));
+  return `${file}?v=${createHash('sha256').update(bytes).digest('hex').slice(0, 8)}`;
+});
+
 home = home.replace(/(\/img\/[a-z0-9-]+\.(?:png|webp))(\?v=[a-f0-9]+)?/g, (_m, file) => {
   const bytes = readFileSync(join(ROOT, file));
   return `${file}?v=${createHash('sha256').update(bytes).digest('hex').slice(0, 8)}`;
