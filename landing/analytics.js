@@ -7,3 +7,24 @@ posthog.init('phc_qFzHQpuk2JUa8suRbaSVAzXhVRPWPD6y75LGNbTiPUac', {
   person_profiles: 'identified_only',
   defaults: '2025-05-24'
 });
+
+// Autocapture records that something was clicked, not what it meant. These two
+// are the only outcomes the site exists for: installing the app, and reaching
+// a listed provider. Without them there is no way to tell traffic from value.
+document.addEventListener('click', function (event) {
+  var el = event.target.closest && event.target.closest('a');
+  if (!el || typeof posthog === 'undefined') return;
+
+  if (el.dataset.cta === 'install') {
+    posthog.capture('install_click', { location: el.closest('section') ? 'app_section' : 'hero' });
+    return;
+  }
+
+  // Outbound links to a provider's own channel, from a locality or type page.
+  if (el.rel && el.rel.indexOf('nofollow') !== -1) {
+    posthog.capture('provider_click', {
+      provider: el.textContent.trim(),
+      page: location.pathname,
+    });
+  }
+});
