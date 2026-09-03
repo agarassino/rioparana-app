@@ -20,6 +20,23 @@ const SITE = 'https://rioparana.com.ar';
 const localidades = JSON.parse(readFileSync(join(ROOT, 'data/localidades.json'), 'utf8'));
 const servicios = JSON.parse(readFileSync(join(ROOT, 'data/servicios.json'), 'utf8'));
 
+// Bake the current river level into the served HTML so crawlers (and readers
+// before JS runs) see a real number instead of the "—" placeholder. The client
+// still refreshes it live afterwards. Offline / API down degrades to "—".
+const byStation = new Map();
+try {
+  const res = await fetch('https://api.rioparana.com.ar/public/river', {
+    headers: { Accept: 'application/json' },
+  });
+  if (res.ok) {
+    for (const r of await res.json()) byStation.set(r.stationId, r);
+  }
+} catch {
+  // no-op: pages keep the placeholder and paint client-side
+}
+
+const fmtM = (v) => `${Number(v)} m`;
+
 // Same content hash the home page gets, so a style fix reaches every page
 // instead of waiting behind a cached stylesheet.
 function stamp(file) {
@@ -43,6 +60,21 @@ function refHeights(estacionLocalidad) {
     alertLevel: estacionLocalidad.alerta,
     evacuationLevel: estacionLocalidad.evacuacion,
   };
+}
+
+// Static text for the level, mirroring the client-side paint, so the value is
+// present in the HTML for crawlers. Returns null when the station has no data.
+function bakedLevel(estacionId) {
+  const r = byStation.get(estacionId);
+  if (!r || !Number.isFinite(Number(r.level))) return null;
+  let txt = `${Number(r.level).toFixed(2)} m`;
+  if (Number.isFinite(Number(r.alertLevel))) {
+    const d = Number(r.alertLevel) - Number(r.level);
+    txt += d >= 0
+      ? ` · a ${d.toFixed(2)} m del nivel de alerta`
+      : ' · supera el nivel de alerta';
+  }
+  return txt;
 }
 const byLocality = new Map();
 for (const s of servicios) {
@@ -115,10 +147,16 @@ function localityPage(loc) {
   const mine = byLocality.get(loc.slug) ?? [];
   const { upstream, downstream } = riverNeighbours(loc, published);
 
-  const title = `${loc.nombre}, ${loc.provincia} — río Paraná, altura y servicios | Paraná Info`;
+  const title = `Altura del río Paraná en ${loc.nombre} hoy — Prefectura Naval | Paraná Info`;
+  const nivel = estLoc ? bakedLevel(estLoc.estacion) : null;
   const description =
-    `Altura del río Paraná en ${loc.nombre}, ${loc.provincia}` +
-    (mine.length ? `, y ${mine.length === 1 ? 'un servicio' : mine.length + ' servicios'} náuticos y de pesca.` : '.');
+    `Altura del río Paraná en ${loc.nombre} hoy, según Prefectura Naval Argentina.` +
+    (estLoc
+      ? ` Nivel en tiempo real, alerta en ${fmtM(estLoc.alerta)} y evacuación en ${fmtM(estLoc.evacuacion)}.`
+      : '') +
+    (mine.length
+      ? ` ${mine.length === 1 ? 'Un servicio náutico y de pesca' : mine.length + ' servicios náuticos y de pesca'} en la zona.`
+      : '');
 
   const jsonld = [
     { '@context': 'https://schema.org', '@type': 'Place', name: loc.nombre,
@@ -142,12 +180,12 @@ function localityPage(loc) {
 <main class="wrap" style="padding-top:2rem">
   <nav class="crumbs"><a href="/">Inicio</a> › <a href="/rio/">Localidades</a> › ${esc(loc.nombre)}</nav>
 
-  <h1>${esc(loc.nombre)}, ${esc(loc.provincia)}</h1>
+  <h1>Altura del río Paraná en ${esc(loc.nombre)}</h1>
 
   <section class="river-now">
     <h2>El río hoy</h2>
-    <p class="river-figure"><span id="river-now" class="st-level">—</span></p>
-    <p id="river-src" class="stations-note" hidden>${
+    <p class="river-figure"><span id="river-now" class="st-level">${nivel ? esc(nivel) : '—'}</span></p>
+    <p id="river-src" class="stations-note"${nivel ? '' : ' hidden'}>${
       prestada
         ? `Lectura de la estación ${esc(estLoc.nombre)}, a ${Math.round(distanceKm(loc, estLoc))} km. ${esc(loc.nombre)} no tiene hidrómetro propio.`
         : `Medición de la Prefectura Naval Argentina en ${esc(loc.nombre)}.`
