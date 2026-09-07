@@ -41,3 +41,12 @@ CREATE TABLE IF NOT EXISTS device_station_views (
 -- table shipped, so they must be applied to existing databases too.
 ALTER TABLE water_levels ADD COLUMN IF NOT EXISTS alert_level numeric;
 ALTER TABLE water_levels ADD COLUMN IF NOT EXISTS evacuation_level numeric;
+
+-- Append-only history. water_levels keeps one row per station and overwrites
+-- it, which answers "what is the river now" but never "what has it been doing".
+CREATE TABLE IF NOT EXISTS water_level_history (
+  station_id text NOT NULL,
+  timestamp  timestamptz NOT NULL,
+  level      numeric NOT NULL,
+  PRIMARY KEY (station_id, timestamp)
+);

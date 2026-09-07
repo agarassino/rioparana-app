@@ -430,3 +430,77 @@ describe('cross-origin reads', () => {
     await a.close();
   });
 });
+
+describe('usage stats', () => {
+  it('GET /stats reports devices and the stations they open', async () => {
+    const a = await app();
+    await a.inject({
+      method: 'POST', url: '/devices/ping', headers: H,
+      payload: { deviceId: '11111111-1111-4111-8111-111111111111', stationId: 'rosario' },
+    });
+
+    const res = await a.inject({ method: 'GET', url: '/stats', headers: H });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ devices: 1, activeLast7Days: 1 });
+    expect(res.json().stations[0]).toMatchObject({ stationId: 'rosario', views: 1 });
+    await a.close();
+  });
+
+  it('GET /stats stays behind the api key', async () => {
+    const a = await app();
+    const res = await a.inject({ method: 'GET', url: '/stats' });
+    expect(res.statusCode).toBe(401);
+    await a.close();
+  });
+});
+
+describe('river history', () => {
+  it('keeps every accepted reading, not just the latest', async () => {
+    const a = await app();
+    const older = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
+
+    await a.inject({
+      method: 'POST', url: '/river', headers: H,
+      payload: { readings: [{ stationId: 'rosario', level: 2.8, trend: 'stable', changeRate: 0, timestamp: older }] },
+    });
+    await a.inject({
+      method: 'POST', url: '/river', headers: H,
+      payload: { readings: [{ stationId: 'rosario', level: 2.9, trend: 'rising', changeRate: 10, timestamp: recentIso() }] },
+    });
+
+    const res = await a.inject({ method: 'GET', url: '/public/river/rosario/history' });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toHaveLength(2);
+    expect(res.json()[0].level).toBe(2.8);
+    await a.close();
+  });
+
+  it('does not record a reading it rejected', async () => {
+    const a = await app();
+    await a.inject({
+      method: 'POST', url: '/river', headers: H,
+      payload: { readings: [{ stationId: 'rosario', level: 9999, trend: 'stable', changeRate: 0, timestamp: recentIso() }] },
+    });
+
+    const res = await a.inject({ method: 'GET', url: '/public/river/rosario/history' });
+
+    expect(res.json()).toEqual([]);
+    await a.close();
+  });
+
+  it('serves the history without an api key, like the rest of the river', async () => {
+    const a = await app();
+    const res = await a.inject({ method: 'GET', url: '/public/river/rosario/history' });
+    expect(res.statusCode).toBe(200);
+    await a.close();
+  });
+
+  it('returns 404 for a station the app does not list', async () => {
+    const a = await app();
+    const res = await a.inject({ method: 'GET', url: '/public/river/nope/history' });
+    expect(res.statusCode).toBe(404);
+    await a.close();
+  });
+});

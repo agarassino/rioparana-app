@@ -4,6 +4,8 @@ import { z } from 'zod';
 import { getAllWaterLevels, getWaterLevel, upsertWaterLevel } from '../stores/riverStore.js';
 import { getNews } from '../stores/newsStore.js';
 import { pingDevice } from '../stores/deviceStore.js';
+import { getDeviceStats } from '../stores/deviceStats.js';
+import { getHistory, recordReading } from '../stores/riverHistory.js';
 import { getWeather } from '../services/weatherService.js';
 import { validateIngest } from '../services/riverIngest.js';
 import { getStationById } from '../config/stations.js';
@@ -67,6 +69,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     }
 
     await upsertWaterLevel(pool, { stationId, ...parsed.data });
+    await recordReading(pool, stationId, parsed.data.timestamp, parsed.data.level);
     return reply.code(204).send();
   });
 
@@ -91,6 +94,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
         continue;
       }
       await upsertWaterLevel(pool, { stationId, ...reading });
+      await recordReading(pool, stationId, reading.timestamp, reading.level);
       stored++;
     }
 
@@ -102,6 +106,12 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
   // public information, so the landing page can show them without shipping a
   // key in its JavaScript.
   app.get('/public/river', async () => getAllWaterLevels(pool));
+
+  app.get('/public/river/:stationId/history', async (req, reply) => {
+    const { stationId } = req.params as { stationId: string };
+    if (!getStationById(stationId)) return reply.code(404).send({ error: 'unknown station' });
+    return getHistory(pool, stationId);
+  });
 
   app.get('/news', async () => getNews(pool));
 
@@ -117,6 +127,9 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     await pingDevice(pool, parsed.data.deviceId, parsed.data.stationId);
     return reply.code(204).send();
   });
+
+  // Usage, not river data: this one stays behind the key.
+  app.get('/stats', async () => getDeviceStats(pool));
 
   app.post('/refresh', async (req, reply) => {
     if (!deps.refreshToken) return reply.code(404).send({ error: 'not found' });
