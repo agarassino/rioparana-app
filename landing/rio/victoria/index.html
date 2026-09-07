@@ -7,8 +7,8 @@
 <meta name="description" content="Altura del río Paraná en Victoria hoy, según Prefectura Naval Argentina. Nivel en tiempo real, alerta en 4.6 m y evacuación en 4.9 m.">
 <link rel="canonical" href="https://rioparana.com.ar/rio/victoria/">
 <link rel="stylesheet" href="/tokens.css?v=7af02e26">
-<link rel="stylesheet" href="/site.css?v=34d9f85c">
-<script defer src="/analytics.js?v=d5b76b1d"></script>
+<link rel="stylesheet" href="/site.css?v=65db36cb">
+<script defer src="/analytics.js?v=b1ca7a7c"></script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Place","name":"Victoria","address":{"@type":"PostalAddress","addressLocality":"Victoria","addressRegion":"Entre Ríos","addressCountry":"AR"},"geo":{"@type":"GeoCoordinates","latitude":-32.6167,"longitude":-60.15}}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Paraná Info","item":"https://rioparana.com.ar"},{"@type":"ListItem","position":2,"name":"Localidades","item":"https://rioparana.com.ar/rio/"},{"@type":"ListItem","position":3,"name":"Victoria","item":"https://rioparana.com.ar/rio/victoria/"}]}</script>
 </head>
@@ -324,6 +324,19 @@ function dayBadge(change) {
 })();
 </script>
 
+<aside class="app-bar" id="app-bar" hidden>
+  <img class="app-bar-icon" src="/img/app-icon.png?v=0efeace2" alt="" width="44" height="44">
+  <span class="app-bar-copy">
+    <b>Paraná Info</b>
+    <span>38 estaciones y casi 1.000 puntos de pesca, en el teléfono</span>
+  </span>
+  <a class="btn btn-primary app-bar-cta" data-cta="install" data-cta-location="app_bar"
+     href="https://play.google.com/store/apps/details?id=com.syloper.rioparanaapp" target="_blank" rel="noopener">Instalar</a>
+  <button type="button" class="app-bar-close" id="app-bar-close" aria-label="Cerrar aviso">
+    <span aria-hidden="true">×</span>
+  </button>
+</aside>
+
 <script>
 (function(){
   var btn = document.getElementById('share-river');
@@ -413,6 +426,89 @@ function clipboardText(payload) {
       track('clipboard');
     }, function(){ said('No se pudo copiar'); });
   });
+})();
+</script>
+
+<script>
+(function(){
+  var bar = document.getElementById('app-bar');
+  if (!bar) return;
+// The install bar shown on locality pages.
+//
+// Those pages carry the organic traffic and had no link to the listing at all,
+// so a reader who arrived from a search had no way to install. A slim, sticky,
+// dismissible bar is what Google's own guidance allows; a covering interstitial
+// is what it penalises, which is why this is a bar and not a popup.
+
+const DISMISS_KEY = 'pi.appbar.dismissed';
+// A quarter of the page: enough to tell a reader from a bounce.
+const SHOW_RATIO = 0.25;
+// …but never more than this much scrolling, so a long page still gets asked.
+const MAX_SCROLL_PX = 800;
+
+/** True once the reader has closed the bar. Never throws. */
+function isDismissed(storage) {
+  try {
+    return storage.getItem(DISMISS_KEY) === '1';
+  } catch {
+    // Private-mode Safari throws on access, and a missing store is the same
+    // answer: we have no record, so the bar may show.
+    return false;
+  }
+}
+
+/** Remember a dismissal. Failing to is a small annoyance, not an error. */
+function rememberDismissal(storage) {
+  try {
+    storage.setItem(DISMISS_KEY, '1');
+  } catch {
+    // An exception here would leave the bar on screen with a dead close button.
+  }
+}
+
+/** Whether the reader has gone far enough to be worth asking. */
+function shouldReveal({ scrollY, viewportH, docH }, ratio = SHOW_RATIO) {
+  const scrollable = docH - viewportH;
+  // Nothing to scroll: no scroll event will ever arrive, so ask now.
+  if (scrollable <= 0) return true;
+
+  return scrollY >= Math.min(scrollable * ratio, MAX_SCROLL_PX);
+}
+
+  var store = null;
+  try { store = window.localStorage; } catch (e) { store = null; }
+  if (isDismissed(store)) return;
+
+  var shown = false;
+  function measure(){
+    return {
+      scrollY: window.pageYOffset || document.documentElement.scrollTop || 0,
+      viewportH: window.innerHeight || 0,
+      docH: document.documentElement.scrollHeight || 0
+    };
+  }
+
+  function reveal(){
+    if (shown || !shouldReveal(measure())) return;
+    shown = true;
+    bar.hidden = false;
+    window.removeEventListener('scroll', reveal);
+    if (typeof posthog !== 'undefined') {
+      posthog.capture('app_bar_shown', { page: location.pathname });
+    }
+  }
+
+  document.getElementById('app-bar-close').addEventListener('click', function(){
+    bar.hidden = true;
+    rememberDismissal(store);
+    if (typeof posthog !== 'undefined') {
+      posthog.capture('app_bar_dismiss', { page: location.pathname });
+    }
+  });
+
+  window.addEventListener('scroll', reveal, { passive: true });
+  // A page that fits the viewport fires no scroll event, so decide once now.
+  reveal();
 })();
 </script>
 

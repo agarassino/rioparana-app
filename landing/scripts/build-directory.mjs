@@ -16,6 +16,7 @@ import {
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SITE = 'https://rioparana.com.ar';
+const PLAY_URL = 'https://play.google.com/store/apps/details?id=com.syloper.rioparanaapp';
 
 const localidades = JSON.parse(readFileSync(join(ROOT, 'data/localidades.json'), 'utf8'));
 const servicios = JSON.parse(readFileSync(join(ROOT, 'data/servicios.json'), 'utf8'));
@@ -55,6 +56,7 @@ const inlineModule = (file) =>
 
 const SPARKLINE_SRC = inlineModule('scripts/sparkline.mjs');
 const SHARE_SRC = inlineModule('scripts/share.mjs');
+const APPBAR_SRC = inlineModule('scripts/appbar.mjs');
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
   .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -297,6 +299,71 @@ const SHARE_BUTTON = `
       </button>
     </p>`;
 
+// These pages carry the organic traffic and had no link to the listing at all:
+// a reader arriving from a search could read the height and had no way to
+// install. A slim sticky bar is what Google's guidance permits; a covering
+// interstitial is what it penalises, so this is deliberately not a popup.
+// Both numbers are checked against what actually ships: 38 stations served by
+// /public/river, 997 features in parana-map.geojson.
+const APP_BAR = `
+<aside class="app-bar" id="app-bar" hidden>
+  <img class="app-bar-icon" src="${stamp('/img/app-icon.png')}" alt="" width="44" height="44">
+  <span class="app-bar-copy">
+    <b>Paraná Info</b>
+    <span>38 estaciones y casi 1.000 puntos de pesca, en el teléfono</span>
+  </span>
+  <a class="btn btn-primary app-bar-cta" data-cta="install" data-cta-location="app_bar"
+     href="${PLAY_URL}" target="_blank" rel="noopener">Instalar</a>
+  <button type="button" class="app-bar-close" id="app-bar-close" aria-label="Cerrar aviso">
+    <span aria-hidden="true">\u00d7</span>
+  </button>
+</aside>`;
+
+function appBarScript() {
+  return `
+<script>
+(function(){
+  var bar = document.getElementById('app-bar');
+  if (!bar) return;
+${APPBAR_SRC}
+  var store = null;
+  try { store = window.localStorage; } catch (e) { store = null; }
+  if (isDismissed(store)) return;
+
+  var shown = false;
+  function measure(){
+    return {
+      scrollY: window.pageYOffset || document.documentElement.scrollTop || 0,
+      viewportH: window.innerHeight || 0,
+      docH: document.documentElement.scrollHeight || 0
+    };
+  }
+
+  function reveal(){
+    if (shown || !shouldReveal(measure())) return;
+    shown = true;
+    bar.hidden = false;
+    window.removeEventListener('scroll', reveal);
+    if (typeof posthog !== 'undefined') {
+      posthog.capture('app_bar_shown', { page: location.pathname });
+    }
+  }
+
+  document.getElementById('app-bar-close').addEventListener('click', function(){
+    bar.hidden = true;
+    rememberDismissal(store);
+    if (typeof posthog !== 'undefined') {
+      posthog.capture('app_bar_dismiss', { page: location.pathname });
+    }
+  });
+
+  window.addEventListener('scroll', reveal, { passive: true });
+  // A page that fits the viewport fires no scroll event, so decide once now.
+  reveal();
+})();
+</script>`;
+}
+
 function localityPage(loc) {
   const estLoc = nearestStationLocality(loc, localidades);
   const prestada = estLoc && estLoc.slug !== loc.slug;
@@ -365,7 +432,9 @@ ${grouped.map(([t, list]) => `
 </main>
 ${riverScript(estLoc ? estLoc.estacion : null, prestada)}
 ${trendScript(estLoc ? estLoc.estacion : null, estLoc ? estLoc.alerta : null)}
+${APP_BAR}
 ${shareScript(loc.nombre)}
+${appBarScript()}
 ${FOOT}`;
 }
 

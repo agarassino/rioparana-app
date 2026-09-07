@@ -16,7 +16,13 @@ document.addEventListener('click', function (event) {
   if (!el || typeof posthog === 'undefined') return;
 
   if (el.dataset.cta === 'install') {
-    posthog.capture('install_click', { location: el.closest('section') ? 'app_section' : 'hero' });
+    // The bar on the locality pages says where it is, because "app_section vs
+    // hero" cannot describe it and mislabelling would hide whether the bar is
+    // the thing converting the organic traffic.
+    posthog.capture('install_click', {
+      location: el.dataset.ctaLocation || (el.closest('section') ? 'app_section' : 'hero'),
+      page: location.pathname,
+    });
     return;
   }
 

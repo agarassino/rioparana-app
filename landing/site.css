@@ -427,3 +427,42 @@ a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visibl
 :root {
   --share-glyph: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="10.5" x2="15.4" y2="6.5"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/></svg>');
 }
+
+/* Install bar. Slim, sticky at the bottom, dismissible — the shape Google's
+   guidance allows. It appears only after the reader has gone a quarter down
+   the page, and never again once closed. */
+.app-bar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+  display: flex; align-items: center; gap: var(--space-2xs);
+  padding: var(--space-2xs) var(--space-sm);
+  padding-bottom: calc(var(--space-2xs) + env(safe-area-inset-bottom, 0px));
+  background: var(--color-paper-2);
+  border-top: var(--rule-hair) solid var(--color-rule);
+  box-shadow: 0 -2px 12px rgb(0 0 0 / 0.10);
+}
+.app-bar-icon { width: 44px; height: 44px; border-radius: 10px; flex: none;
+  border: var(--rule-hair) solid var(--color-rule); }
+.app-bar-copy { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto;
+  line-height: 1.25; }
+.app-bar-copy b { font-family: var(--font-display); font-size: var(--text-base);
+  color: var(--color-ink); }
+.app-bar-copy span { font-size: var(--text-sm); color: var(--color-muted);
+  /* One line on a phone: the bar has to stay slim to stay allowed. */
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-bar-cta { flex: none; padding: 9px 16px; }
+.app-bar-close { flex: none; background: none; border: 0; cursor: pointer;
+  color: var(--color-muted); font-size: var(--text-lg); line-height: 1;
+  /* A 44px target: the close has to be as easy to hit as the install. */
+  width: 44px; height: 44px; display: flex; align-items: center;
+  justify-content: center; }
+.app-bar-close:hover { color: var(--color-ink); }
+
+/* The bar floats over the footer, so give the page somewhere to end. */
+body:has(.app-bar:not([hidden])) { padding-bottom: 76px; }
+
+@media (max-width: 30rem) {
+  .app-bar-icon { width: 36px; height: 36px; }
+  .app-bar-copy b { font-size: var(--text-sm); }
+  .app-bar-copy span { font-size: var(--text-xs); }
+  .app-bar-cta { padding: 8px 12px; font-size: var(--text-xs); }
+}
