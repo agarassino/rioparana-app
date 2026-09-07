@@ -45,6 +45,14 @@ function stamp(file) {
 }
 const CSS = { tokens: stamp('/tokens.css'), site: stamp('/site.css'), analytics: stamp('/analytics.js') };
 
+// The chart maths reaches the browser as the very file the tests import, with
+// the export keywords stripped. Inlining beats serving it separately: it is
+// under 3 kB, it paints without a second round trip, and a new /sparkline.js
+// would need its own COPY line in the Dockerfile — which is exactly how the
+// /rio/* pages once shipped as 404s.
+const SPARKLINE_SRC = readFileSync(join(ROOT, 'scripts/sparkline.mjs'), 'utf8')
+  .replace(/^export /gm, '');
+
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
   .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -141,6 +149,74 @@ function riverScript(estacionId, prestada) {
 </script>`;
 }
 
+// The trend is drawn on the client and nowhere else. Baking it would freeze a
+// seven-day window at the moment of the last deploy, and a chart headed "los
+// últimos días" showing three-week-old dates is worse than no chart. The
+// section ships hidden and reveals itself only once there are two readings to
+// join, so a station with no history yet looks exactly as it does today.
+function trendScript(estacionId, alertLevel) {
+  if (!estacionId) return '';
+  const alert = Number.isFinite(Number(alertLevel)) ? Number(alertLevel) : 'null';
+
+  return `
+<script>
+(function(){
+  var sec = document.getElementById('river-trend');
+  if (!sec || !window.fetch) return;
+${SPARKLINE_SRC}
+  var fmtDay = function(iso){
+    try { return new Date(iso).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }); }
+    catch (e) { return ''; }
+  };
+
+  fetch('https://api.rioparana.com.ar/public/river/' + ${JSON.stringify(estacionId)} + '/history',
+        { headers: { Accept: 'application/json' } })
+    .then(function(r){ if (!r.ok) throw 0; return r.json(); })
+    .then(function(rows){
+      var now = new Date();
+      var points = lastDays(rows, CHART_DAYS, now);
+      var line = sparkline(points, { width: 640, height: 150, padding: 12, alertLevel: ${alert} });
+      // One reading is not a trend. Say nothing rather than draw a dot and
+      // call it a week.
+      if (!line) return;
+
+      var badge = dayBadge(dayChange(points, now));
+      if (badge) {
+        var day = sec.querySelector('.trend-day');
+        day.setAttribute('data-dir', badge.dir);
+        sec.querySelector('.trend-day-text').textContent = badge.text;
+        sec.querySelector('.trend-day-detail').textContent = badge.detail;
+        day.hidden = false;
+      }
+
+      sec.querySelector('.trend-summary').textContent = trendSummary(line);
+      sec.querySelector('.trend-chart').innerHTML = chartSvg(line);
+      sec.querySelector('.trend-scale').textContent = scaleLabel(line);
+      sec.querySelector('.trend-range').textContent = rangeLabel(line, fmtDay);
+      sec.hidden = false;
+    })
+    .catch(function(){});
+})();
+</script>`;
+}
+
+// The last day comes first: "what did it do since yesterday" is the question
+// people actually arrive with. The week is context for that answer, not the
+// answer itself. The badge hides on its own when the readings cannot say.
+const TREND_SECTION = `
+  <section class="river-trend" id="river-trend" hidden>
+    <h2>Cómo viene el río</h2>
+    <p class="trend-day" hidden>
+      <span class="trend-arrow" aria-hidden="true"></span>
+      <span class="trend-day-text"></span>
+      <span class="trend-day-detail"></span>
+    </p>
+    <p class="trend-summary"></p>
+    <div class="trend-chart"></div>
+    <p class="trend-scale"></p>
+    <p class="stations-note trend-range"></p>
+  </section>`;
+
 function localityPage(loc) {
   const estLoc = nearestStationLocality(loc, localidades);
   const prestada = estLoc && estLoc.slug !== loc.slug;
@@ -191,6 +267,7 @@ function localityPage(loc) {
         : `Medición de la Prefectura Naval Argentina en ${esc(loc.nombre)}.`
     }</p>
   </section>
+${TREND_SECTION}
 
   <section>
     <p class="lede">${esc(buildIntro(loc, estLoc, refHeights(estLoc), mine))}</p>
@@ -207,6 +284,7 @@ ${grouped.map(([t, list]) => `
   </nav>
 </main>
 ${riverScript(estLoc ? estLoc.estacion : null, prestada)}
+${trendScript(estLoc ? estLoc.estacion : null, estLoc ? estLoc.alerta : null)}
 ${FOOT}`;
 }
 

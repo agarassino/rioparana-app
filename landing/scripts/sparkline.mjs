@@ -1,92 +1,10 @@
-<!doctype html>
-<html lang="es-AR">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Altura del río Paraná en Villa Constitución hoy — Prefectura Naval | Paraná Info</title>
-<meta name="description" content="Altura del río Paraná en Villa Constitución hoy, según Prefectura Naval Argentina. Nivel en tiempo real, alerta en 4 m y evacuación en 4.5 m.">
-<link rel="canonical" href="https://rioparana.com.ar/rio/villa-constitucion/">
-<link rel="stylesheet" href="/tokens.css?v=7af02e26">
-<link rel="stylesheet" href="/site.css?v=23d1716a">
-<script defer src="/analytics.js?v=d5b76b1d"></script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Place","name":"Villa Constitución","address":{"@type":"PostalAddress","addressLocality":"Villa Constitución","addressRegion":"Santa Fe","addressCountry":"AR"},"geo":{"@type":"GeoCoordinates","latitude":-33.2333,"longitude":-60.3333}}</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Paraná Info","item":"https://rioparana.com.ar"},{"@type":"ListItem","position":2,"name":"Localidades","item":"https://rioparana.com.ar/rio/"},{"@type":"ListItem","position":3,"name":"Villa Constitución","item":"https://rioparana.com.ar/rio/villa-constitucion/"}]}</script>
-</head>
-<body>
-<header class="masthead"><div class="masthead-inner wrap">
-  <a class="wordmark" href="/">Paraná Info</a>
-</div></header>
-<main class="wrap" style="padding-top:2rem">
-  <nav class="crumbs"><a href="/">Inicio</a> › <a href="/rio/">Localidades</a> › Villa Constitución</nav>
-
-  <h1>Altura del río Paraná en Villa Constitución</h1>
-
-  <section class="river-now">
-    <h2>El río hoy</h2>
-    <p class="river-figure"><span id="river-now" class="st-level">2.00 m · a 2.00 m del nivel de alerta</span></p>
-    <p id="river-src" class="stations-note">Medición de la Prefectura Naval Argentina en Villa Constitución.</p>
-  </section>
-
-  <section class="river-trend" id="river-trend" hidden>
-    <h2>Cómo viene el río</h2>
-    <p class="trend-day" hidden>
-      <span class="trend-arrow" aria-hidden="true"></span>
-      <span class="trend-day-text"></span>
-      <span class="trend-day-detail"></span>
-    </p>
-    <p class="trend-summary"></p>
-    <div class="trend-chart"></div>
-    <p class="trend-scale"></p>
-    <p class="stations-note trend-range"></p>
-  </section>
-
-  <section>
-    <p class="lede">Villa Constitución, Santa Fe. Sobre el Paraná Inferior. La Prefectura mide la altura del río acá mismo, con alerta en 4.00 m y evacuación en 4.50 m.</p>
-  </section>
-
-
-  <nav class="river-nav">
-    <a href="/rio/rosario/">← Río arriba: Rosario</a>
-    <a href="/rio/san-nicolas/">Río abajo: San Nicolás →</a>
-  </nav>
-</main>
-
-<script>
-(function(){
-  var el = document.getElementById('river-now');
-  if (!el) return;
-  fetch('https://api.rioparana.com.ar/public/river', { headers: { Accept: 'application/json' } })
-    .then(function(r){ if(!r.ok) throw 0; return r.json(); })
-    .then(function(rows){
-      var r = rows.filter(function(x){ return x.stationId === "villa-constitucion"; })[0];
-      if (!r) return;
-      var txt = r.level.toFixed(2) + ' m';
-      if (typeof r.alertLevel === 'number') {
-        var d = r.alertLevel - r.level;
-        txt += d >= 0
-          ? ' · a ' + d.toFixed(2) + ' m del nivel de alerta'
-          : ' · supera el nivel de alerta';
-      }
-      el.textContent = txt;
-      el.setAttribute('data-state', typeof r.alertLevel === 'number' && r.alertLevel - r.level <= 1 ? 'near-alert' : 'live');
-      var src = document.getElementById('river-src');
-      if (src) src.hidden = false;
-    })
-    .catch(function(){});
-})();
-</script>
-
-<script>
-(function(){
-  var sec = document.getElementById('river-trend');
-  if (!sec || !window.fetch) return;
 // Geometry for the river-level sparkline.
 //
 // Pure functions, no DOM: the build script imports them to bake a static SVG,
 // and the browser imports the same code to redraw with fresh readings. Keeping
 // the maths here means the two paths cannot disagree about what a curve means.
 
-const CHART_DAYS = 7;
+export const CHART_DAYS = 7;
 
 // The alert height only earns a line when it is close enough to the readings to
 // share an axis with them. Rosario alerts at 5 m and runs near 3 m: forcing
@@ -99,7 +17,7 @@ const ALERT_MARGIN_M = 0.5;
 const num = (v) => (v === null || v === undefined || v === '' ? NaN : Number(v));
 
 /** Readings from the last `days`, oldest first, with the unusable ones dropped. */
-function lastDays(points, days, now = new Date()) {
+export function lastDays(points, days, now = new Date()) {
   const cutoff = now.getTime() - days * 24 * 60 * 60 * 1000;
 
   return (points ?? [])
@@ -115,7 +33,7 @@ const round = (n) => Math.round(n * 10) / 10;
  * Turns readings into a polyline for a `width` x `height` viewBox.
  * Returns null when there is nothing a line could say.
  */
-function sparkline(points, { width, height, padding = 4, alertLevel } = {}) {
+export function sparkline(points, { width, height, padding = 4, alertLevel } = {}) {
   // Sorted here as well as in lastDays: out-of-order input would make the time
   // span negative and fold the curve back over itself, silently.
   const pts = (points ?? [])
@@ -165,7 +83,7 @@ function sparkline(points, { width, height, padding = 4, alertLevel } = {}) {
  * One sentence describing the movement, for readers who will not decode a
  * curve — and for the page when SVG never renders.
  */
-function trendSummary(line) {
+export function trendSummary(line) {
   if (!line) return '';
 
   const cm = Math.round((line.last - line.first) * 100);
@@ -188,7 +106,7 @@ const attr = (s) =>
     .replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 /** The chart as an SVG string. Pure, so it can be tested without a browser. */
-function chartSvg(line) {
+export function chartSvg(line) {
   if (!line) return '';
 
   const { width: w, height: h } = line;
@@ -216,7 +134,7 @@ function chartSvg(line) {
 }
 
 /** "Mínima 2.80 m · máxima 3.40 m" — the numbers the curve alone cannot give. */
-function scaleLabel(line) {
+export function scaleLabel(line) {
   if (!line) return '';
   return `Mínima ${line.min.toFixed(2)} m · máxima ${line.max.toFixed(2)} m`;
 }
@@ -225,7 +143,7 @@ function scaleLabel(line) {
  * The span actually plotted and where it came from. `fmtDay` is injected so the
  * browser can use its own locale without dragging Intl into the tests.
  */
-function rangeLabel(line, fmtDay) {
+export function rangeLabel(line, fmtDay) {
   if (!line) return '';
   const n = line.count;
   return `${fmtDay(line.from)} — ${fmtDay(line.to)} · ${n} ${n === 1 ? 'medición' : 'mediciones'}` +
@@ -247,7 +165,7 @@ const MAX_SPAN_H = 36;
  * How far the river moved over roughly the last day.
  * Returns null whenever the readings cannot honestly answer that.
  */
-function dayChange(points, now = new Date(), hours = 24) {
+export function dayChange(points, now = new Date(), hours = 24) {
   const pts = points ?? [];
   if (pts.length < 2) return null;
 
@@ -270,7 +188,7 @@ function dayChange(points, now = new Date(), hours = 24) {
 }
 
 /** The change as an arrow, a phrase, and the span it covers. */
-function dayBadge(change) {
+export function dayBadge(change) {
   if (!change) return null;
 
   const detail = `en las últimas ${change.hours} h`;
@@ -282,47 +200,3 @@ function dayBadge(change) {
     detail,
   };
 }
-
-  var fmtDay = function(iso){
-    try { return new Date(iso).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }); }
-    catch (e) { return ''; }
-  };
-
-  fetch('https://api.rioparana.com.ar/public/river/' + "villa-constitucion" + '/history',
-        { headers: { Accept: 'application/json' } })
-    .then(function(r){ if (!r.ok) throw 0; return r.json(); })
-    .then(function(rows){
-      var now = new Date();
-      var points = lastDays(rows, CHART_DAYS, now);
-      var line = sparkline(points, { width: 640, height: 150, padding: 12, alertLevel: 4 });
-      // One reading is not a trend. Say nothing rather than draw a dot and
-      // call it a week.
-      if (!line) return;
-
-      var badge = dayBadge(dayChange(points, now));
-      if (badge) {
-        var day = sec.querySelector('.trend-day');
-        day.setAttribute('data-dir', badge.dir);
-        sec.querySelector('.trend-day-text').textContent = badge.text;
-        sec.querySelector('.trend-day-detail').textContent = badge.detail;
-        day.hidden = false;
-      }
-
-      sec.querySelector('.trend-summary').textContent = trendSummary(line);
-      sec.querySelector('.trend-chart').innerHTML = chartSvg(line);
-      sec.querySelector('.trend-scale').textContent = scaleLabel(line);
-      sec.querySelector('.trend-range').textContent = rangeLabel(line, fmtDay);
-      sec.hidden = false;
-    })
-    .catch(function(){});
-})();
-</script>
-
-<footer class="wrap" style="padding:2rem 0">
-  <p><a href="/">Volver a Paraná Info</a></p>
-  <p class="disclaimer">Alturas: información pública de la Prefectura Naval Argentina.
-  Paraná Info es una aplicación independiente y no está afiliada a ningún organismo público.
-  Los servicios listados enlazan a su contacto público; no republicamos sus datos.</p>
-</footer>
-</body>
-</html>

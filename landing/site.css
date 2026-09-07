@@ -368,3 +368,49 @@ a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visibl
 .stations li .st-name { color: var(--color-ink); text-decoration: none; }
 .stations li .st-name:hover { color: var(--color-accent); text-decoration: underline;
   text-underline-offset: 3px; }
+
+/* Seven-day river trend. Ships hidden and is revealed by the page script only
+   when there are two readings to join, so a station with no history looks the
+   same as it did before the chart existed. */
+.river-trend { border-top: var(--rule-hair) solid var(--color-rule-2);
+  padding: var(--space-md) 0; margin-top: var(--space-md); }
+.river-trend h2 { font-size: var(--text-sm); text-transform: uppercase;
+  letter-spacing: .08em; color: var(--color-muted); margin: 0 0 var(--space-2xs); }
+.trend-summary { font-family: var(--font-display); font-size: var(--text-lg);
+  color: var(--color-ink); margin: 0 0 var(--space-sm); }
+.trend-chart { width: 100%; max-width: 40rem; }
+/* The viewBox carries the aspect ratio; height is fixed so the curve keeps a
+   readable slope on a phone instead of collapsing into a flat line. */
+.trend-svg { display: block; width: 100%; height: 150px; overflow: visible; }
+.trend-line { fill: none; stroke: var(--color-accent); stroke-width: 2;
+  stroke-linejoin: round; stroke-linecap: round; }
+.trend-area { fill: var(--color-accent-bg); stroke: none; }
+.trend-alert { stroke: var(--color-emergency); stroke-width: 1;
+  stroke-dasharray: 4 4; vector-effect: non-scaling-stroke; }
+.trend-scale { font-family: var(--font-mono); font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums; color: var(--color-ink-2);
+  margin: var(--space-2xs) 0 0; }
+.river-trend .trend-range { margin-top: var(--space-3xs); }
+
+/* What the river did since yesterday — the question people arrive with. The
+   arrow is drawn from data-dir so the script only sets an attribute. */
+.trend-day { display: flex; align-items: baseline; gap: var(--space-2xs);
+  margin: 0 0 var(--space-2xs); font-family: var(--font-display);
+  font-size: var(--text-xl); color: var(--color-ink); }
+.trend-arrow { font-size: var(--text-md); line-height: 1; }
+.trend-day[data-dir="up"] .trend-arrow::before { content: "▲"; }
+.trend-day[data-dir="down"] .trend-arrow::before { content: "▼"; }
+.trend-day[data-dir="flat"] .trend-arrow::before { content: "—"; }
+/* A rising river is the direction that carries risk, so it takes the accent.
+   Falling and still stay quiet rather than borrowing the alert red, which is
+   reserved for actually nearing the alert height. */
+.trend-day[data-dir="up"] .trend-arrow,
+.trend-day[data-dir="up"] .trend-day-text { color: var(--color-accent); }
+.trend-day[data-dir="down"] .trend-arrow,
+.trend-day[data-dir="down"] .trend-day-text { color: var(--color-ink-2); }
+.trend-day[data-dir="flat"] .trend-arrow,
+.trend-day[data-dir="flat"] .trend-day-text { color: var(--color-muted); }
+.trend-day-detail { font-family: var(--font-mono); font-size: var(--text-sm);
+  color: var(--color-muted); }
+/* With the day badge carrying the headline, the week steps down to context. */
+.trend-summary { font-size: var(--text-md); color: var(--color-ink-2); }
