@@ -13,6 +13,7 @@ import {
   buildIntro, nearestStationLocality, publishable, riverNeighbours,
   riverOrder, tipoLabel, tipos, distanceKm,
 } from './directory.mjs';
+import { gauge, gaugeHtml, marginLabel } from './gauge.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SITE = 'https://rioparana.com.ar';
@@ -56,6 +57,7 @@ const inlineModule = (file) =>
 
 const SPARKLINE_SRC = inlineModule('scripts/sparkline.mjs');
 const SHARE_SRC = inlineModule('scripts/share.mjs');
+const GAUGE_SRC = inlineModule('scripts/gauge.mjs');
 const APPBAR_SRC = inlineModule('scripts/appbar.mjs');
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
@@ -75,20 +77,26 @@ function refHeights(estacionLocalidad) {
   };
 }
 
-// Static text for the level, mirroring the client-side paint, so the value is
-// present in the HTML for crawlers. Returns null when the station has no data.
-function bakedLevel(estacionId) {
-  const r = byStation.get(estacionId);
-  if (!r || !Number.isFinite(Number(r.level))) return null;
-  let txt = `${Number(r.level).toFixed(2)} m`;
-  if (Number.isFinite(Number(r.alertLevel))) {
-    const d = Number(r.alertLevel) - Number(r.level);
-    txt += d >= 0
-      ? ` · a ${d.toFixed(2)} m del nivel de alerta`
-      : ' · supera el nivel de alerta';
-  }
-  return txt;
+// The reading, baked so a crawler and a reader without JavaScript both see a
+// real number. The distance to alert used to be glued onto the same line; it
+// now lives under the bar, where it does not compete with the figure itself.
+function bakedReading(estacionLocalidad) {
+  if (!estacionLocalidad) return { level: null, gauge: null };
+  const r = byStation.get(estacionLocalidad.estacion);
+  if (!r || !Number.isFinite(Number(r.level))) return { level: null, gauge: null };
+
+  return {
+    level: `${Number(r.level).toFixed(2)} m`,
+    // Alert and evacuation come from the locality data, which is stable and
+    // committed, rather than from whatever the API happened to answer.
+    gauge: gauge({
+      level: Number(r.level),
+      alertLevel: estacionLocalidad.alerta,
+      evacuationLevel: estacionLocalidad.evacuacion,
+    }),
+  };
 }
+
 const byLocality = new Map();
 for (const s of servicios) {
   if (!byLocality.has(s.localidad)) byLocality.set(s.localidad, []);
@@ -126,26 +134,42 @@ const FOOT = `
 </html>`;
 
 // Painted on the client so a regenerated page is not needed for fresh numbers.
-function riverScript(estacionId, prestada) {
+// The bar is rebuilt from the same gauge.mjs the build used, so the served
+// markup and the repainted markup cannot drift apart.
+function riverScript(estacionId, estacionLocalidad) {
+  if (!estacionId) return '';
+  const alerta = Number.isFinite(Number(estacionLocalidad?.alerta))
+    ? Number(estacionLocalidad.alerta) : 'null';
+  const evac = Number.isFinite(Number(estacionLocalidad?.evacuacion))
+    ? Number(estacionLocalidad.evacuacion) : 'null';
+
   return `
 <script>
 (function(){
   var el = document.getElementById('river-now');
   if (!el) return;
+${GAUGE_SRC}
   fetch('https://api.rioparana.com.ar/public/river', { headers: { Accept: 'application/json' } })
     .then(function(r){ if(!r.ok) throw 0; return r.json(); })
     .then(function(rows){
       var r = rows.filter(function(x){ return x.stationId === ${JSON.stringify(estacionId)}; })[0];
       if (!r) return;
-      var txt = r.level.toFixed(2) + ' m';
-      if (typeof r.alertLevel === 'number') {
-        var d = r.alertLevel - r.level;
-        txt += d >= 0
-          ? ' · a ' + d.toFixed(2) + ' m del nivel de alerta'
-          : ' · supera el nivel de alerta';
+
+      var g = gauge({ level: r.level, alertLevel: ${alerta}, evacuationLevel: ${evac} });
+      // The figure carries the unit in its own span so the number stays the
+      // loudest thing on the page.
+      el.innerHTML = r.level.toFixed(2) + '<span class="unit"> m</span>';
+      el.setAttribute('data-state', g ? g.state : 'live');
+
+      var bar = document.getElementById('river-gauge');
+      if (bar && g) bar.innerHTML = gaugeHtml(g);
+
+      var margin = document.getElementById('river-margin');
+      if (margin && g) {
+        margin.textContent = marginLabel(g);
+        margin.hidden = false;
       }
-      el.textContent = txt;
-      el.setAttribute('data-state', typeof r.alertLevel === 'number' && r.alertLevel - r.level <= 1 ? 'near-alert' : 'live');
+
       var src = document.getElementById('river-src');
       if (src) src.hidden = false;
     })
@@ -231,10 +255,10 @@ function shareScript(nombre) {
 <script>
 (function(){
   var btn = document.getElementById('share-river');
-  if (!btn) return;
+  var wa = document.getElementById('share-wa');
+  if (!btn || !wa) return;
   var canShare = typeof navigator.share === 'function';
   var canCopy = !!(navigator.clipboard && navigator.clipboard.writeText);
-  if (!canShare && !canCopy) return;
 ${SHARE_SRC}
   var label = btn.querySelector('.share-label');
   var idle = label.textContent;
@@ -252,10 +276,11 @@ ${SHARE_SRC}
 
   function current(){
     var lvl = document.getElementById('river-now');
-    // "3.12 m · a 1.88 m del nivel de alerta" — the tail only travels when the
-    // page is actually flagging the river as close to alert.
-    var parts = (lvl ? lvl.textContent : '').split(' · ');
-    var near = lvl && lvl.getAttribute('data-state') === 'near-alert';
+    var margin = document.getElementById('river-margin');
+    var state = lvl ? lvl.getAttribute('data-state') : null;
+    // The distance to alert travels only when the page is actually flagging
+    // the river as close to it; the rest of the time it is noise.
+    var near = state === 'near-alert' || state === 'alert' || state === 'evacuation';
 
     var day = document.querySelector('.trend-day');
     var dayText = day && !day.hidden
@@ -267,12 +292,21 @@ ${SHARE_SRC}
     return sharePayload({
       locality: ${JSON.stringify(nombre)},
       url: canonical ? canonical.href : location.href.split('?')[0],
-      level: parts[0],
-      alert: near ? parts[1] : null,
+      level: lvl ? lvl.textContent : '',
+      alert: near && margin ? margin.textContent : null,
       day: dayText
     });
   }
 
+  // WhatsApp is where this actually gets forwarded here, so it gets its own
+  // button rather than hiding one tap deeper inside the share sheet.
+  wa.hidden = false;
+  wa.addEventListener('click', function(){
+    track('whatsapp');
+    window.open(whatsappUrl(current()), '_blank', 'noopener');
+  });
+
+  if (!canShare && !canCopy) return;
   btn.hidden = false;
   btn.addEventListener('click', function(){
     var payload = current();
@@ -291,13 +325,23 @@ ${SHARE_SRC}
 </script>`;
 }
 
-const SHARE_BUTTON = `
-    <p class="river-actions">
-      <button type="button" class="btn btn-ghost share-btn" id="share-river" hidden>
-        <span class="share-icon" aria-hidden="true"></span>
-        <span class="share-label" aria-live="polite">Compartir</span>
-      </button>
-    </p>`;
+// One mark per service type. Inline SVG rather than a sprite or a font: five
+// small paths cost less than another request, and they inherit the text
+// colour so they follow the theme without a second definition.
+const TIPO_ICON = {
+  'guia-pesca': '<path d="M3 17c4-6 9-9 15-9"/><path d="M14 4l4 4-3 3"/><path d="M7 21c2-2 3-4 3-6"/>',
+  lodge: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',
+  'escuela-kayak': '<path d="M2 8l20 8"/><path d="M5 16c4.5 2.5 9.5 2.5 14 0"/><path d="M4 12h16"/>',
+  'escuela-paddle': '<path d="M12 2v14"/><path d="M12 16c-3 0-5 2-5 5h10c0-3-2-5-5-5z"/><path d="M8 5l4-3 4 3"/>',
+  'escuela-navegacion': '<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5.5-5.5 2 2-5.5z"/>',
+};
+
+function tipoIcon(tipo) {
+  const paths = TIPO_ICON[tipo];
+  if (!paths) return '';
+  return `<svg class="svc-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" ` +
+    `stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+}
 
 // These pages carry the organic traffic and had no link to the listing at all:
 // a reader arriving from a search could read the height and had no way to
@@ -364,6 +408,18 @@ ${APPBAR_SRC}
 </script>`;
 }
 
+const SHARE_BUTTONS = `
+    <p class="river-actions">
+      <button type="button" class="btn btn-primary share-wa" id="share-wa" hidden>
+        <span class="wa-icon" aria-hidden="true"></span>
+        <span>Enviar por WhatsApp</span>
+      </button>
+      <button type="button" class="btn btn-ghost share-btn" id="share-river" hidden>
+        <span class="share-icon" aria-hidden="true"></span>
+        <span class="share-label" aria-live="polite">Compartir</span>
+      </button>
+    </p>`;
+
 function localityPage(loc) {
   const estLoc = nearestStationLocality(loc, localidades);
   const prestada = estLoc && estLoc.slug !== loc.slug;
@@ -371,7 +427,7 @@ function localityPage(loc) {
   const { upstream, downstream } = riverNeighbours(loc, published);
 
   const title = `Altura del río Paraná en ${loc.nombre} hoy — Prefectura Naval | Paraná Info`;
-  const nivel = estLoc ? bakedLevel(estLoc.estacion) : null;
+  const lectura = bakedReading(estLoc);
   const description =
     `Altura del río Paraná en ${loc.nombre} hoy, según Prefectura Naval Argentina.` +
     (estLoc
@@ -407,22 +463,28 @@ function localityPage(loc) {
 
   <section class="river-now">
     <h2>El río hoy</h2>
-    <p class="river-figure"><span id="river-now" class="st-level">${nivel ? esc(nivel) : '—'}</span></p>
-    <p id="river-src" class="stations-note"${nivel ? '' : ' hidden'}>${
+    <p class="river-figure"><span id="river-now" class="st-level"${
+      lectura.gauge ? ` data-state="${lectura.gauge.state}"` : ''
+    }>${lectura.level ? `${esc(lectura.level.replace(' m', ''))}<span class="unit"> m</span>` : '—'}</span></p>
+    <div id="river-gauge">${gaugeHtml(lectura.gauge)}</div>
+    <p id="river-margin" class="river-margin"${lectura.gauge ? '' : ' hidden'}>${
+      esc(marginLabel(lectura.gauge))
+    }</p>
+    <p id="river-src" class="stations-note"${lectura.level ? '' : ' hidden'}>${
       prestada
         ? `Lectura de la estación ${esc(estLoc.nombre)}, a ${Math.round(distanceKm(loc, estLoc))} km. ${esc(loc.nombre)} no tiene hidrómetro propio.`
         : `Medición de la Prefectura Naval Argentina en ${esc(loc.nombre)}.`
-    }</p>${SHARE_BUTTON}
+    }</p>${SHARE_BUTTONS}
   </section>
 ${TREND_SECTION}
 
-  <section>
+  <section class="intro">
     <p class="lede">${esc(buildIntro(loc, estLoc, refHeights(estLoc), mine))}</p>
   </section>
 ${grouped.map(([t, list]) => `
-  <section>
-    <h2>${esc(tipoLabel(t).titulo)} en ${esc(loc.nombre)}</h2>
-    <ul class="svc-list">${list.map((s) => `<li><a href="${esc(s.ficha ?? s.contacto)}"${s.ficha ? '' : ' rel="nofollow noopener" target="_blank"'}>${esc(s.nombre)}</a></li>`).join('')}</ul>
+  <section class="svc-group">
+    <h2 class="svc-head">${tipoIcon(t)}<span>${esc(tipoLabel(t).titulo)} en ${esc(loc.nombre)}</span></h2>
+    <ul class="svc-list">${list.map((sv) => `<li><a href="${esc(sv.ficha ?? sv.contacto)}"${sv.ficha ? '' : ' rel="nofollow noopener" target="_blank"'}>${esc(sv.nombre)}</a></li>`).join('')}</ul>
   </section>`).join('')}
 
   <nav class="river-nav">
@@ -430,7 +492,7 @@ ${grouped.map(([t, list]) => `
     ${downstream ? `<a href="/rio/${downstream.slug}/">Río abajo: ${esc(downstream.nombre)} →</a>` : '<span></span>'}
   </nav>
 </main>
-${riverScript(estLoc ? estLoc.estacion : null, prestada)}
+${riverScript(estLoc ? estLoc.estacion : null, estLoc)}
 ${trendScript(estLoc ? estLoc.estacion : null, estLoc ? estLoc.alerta : null)}
 ${APP_BAR}
 ${shareScript(loc.nombre)}

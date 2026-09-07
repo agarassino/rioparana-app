@@ -65,10 +65,14 @@ describe('buildIntro', () => {
     expect(intro).toContain('Paraná Medio');
   });
 
-  test('states the alert height when the locality has its own gauge', () => {
+  test('says the reading is measured here, without repeating the numbers', () => {
+    // The alert and evacuation heights are drawn on the gauge a few lines
+    // above. Spelling them out again is what made the page feel long.
     const intro = buildIntro(goya, goya, station, []);
-    expect(intro).toContain('5.20');
+
     expect(intro).toMatch(/mide la altura del río acá/i);
+    expect(intro).not.toContain('5.20');
+    expect(intro).not.toMatch(/alerta|evacuación/i);
   });
 
   test('says where a borrowed reading comes from and how far', () => {
@@ -77,12 +81,21 @@ describe('buildIntro', () => {
     expect(intro).toMatch(/\d+ km/);
   });
 
-  test('counts the listed services by type', () => {
+  test('does not announce services that the headings below already name', () => {
+    // Each type gets its own heading with an icon further down the page, so
+    // counting them here was the page restating itself to the reader.
     const intro = buildIntro(goya, goya, station, [
       { tipo: 'guia-pesca' }, { tipo: 'guia-pesca' }, { tipo: 'lodge' },
     ]);
-    expect(intro).toContain('2 guías de pesca');
-    expect(intro).toContain('1 lodge');
+
+    expect(intro).not.toMatch(/gu[ií]as de pesca|lodge|directorio/i);
+  });
+
+  test('stays the same whether or not anything is listed there', () => {
+    const sin = buildIntro(goya, goya, station, []);
+    const con = buildIntro(goya, goya, station, [{ tipo: 'lodge' }]);
+
+    expect(con).toBe(sin);
   });
 
   test('differs between localities, which is the point of generating it', () => {

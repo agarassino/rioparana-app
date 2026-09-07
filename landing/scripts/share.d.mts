@@ -17,3 +17,5 @@ export interface SharePayload {
 
 export function sharePayload(input: ShareInput): SharePayload;
 export function clipboardText(payload: SharePayload): string;
+
+export function whatsappUrl(payload: SharePayload): string;

@@ -91,14 +91,10 @@ export function buildIntro(localidad, estacionLocalidad, estacion, servicios) {
   const frases = [`${localidad.nombre}, ${localidad.provincia}. Sobre el ${tramo(localidad.lat)}.`];
 
   if (estacionLocalidad && estacionLocalidad.slug === localidad.slug) {
-    const alturas = [];
-    if (Number.isFinite(estacion?.alertLevel)) alturas.push(`alerta en ${estacion.alertLevel.toFixed(2)} m`);
-    if (Number.isFinite(estacion?.evacuationLevel)) alturas.push(`evacuación en ${estacion.evacuationLevel.toFixed(2)} m`);
-    frases.push(
-      alturas.length
-        ? `La Prefectura mide la altura del río acá mismo, con ${listar(alturas)}.`
-        : 'La Prefectura mide la altura del río acá mismo.'
-    );
+    // The alert and evacuation heights used to be spelled out here. They are
+    // drawn on the gauge now, and a number the reader can already see is the
+    // kind of text that makes a page feel long without saying anything.
+    frases.push('La Prefectura mide la altura del río acá mismo.');
   } else if (estacionLocalidad) {
     const km = Math.round(distanceKm(localidad, estacionLocalidad));
     frases.push(
@@ -106,9 +102,8 @@ export function buildIntro(localidad, estacionLocalidad, estacion, servicios) {
     );
   }
 
-  const counts = contarServicios(servicios);
-  if (counts.length) frases.push(`Hay ${listar(counts)} en el directorio.`);
-
+  // What is listed is announced by the headings a few lines below, each with
+  // its own icon. Counting them here restated the page to itself.
   return frases.join(' ');
 }
 

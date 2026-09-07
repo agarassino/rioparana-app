@@ -7,7 +7,7 @@
 <meta name="description" content="Altura del río Paraná en Santa Fe hoy, según Prefectura Naval Argentina. Nivel en tiempo real, alerta en 5.3 m y evacuación en 5.7 m. 2 servicios náuticos y de pesca en la zona.">
 <link rel="canonical" href="https://rioparana.com.ar/rio/santa-fe/">
 <link rel="stylesheet" href="/tokens.css?v=7af02e26">
-<link rel="stylesheet" href="/site.css?v=65db36cb">
+<link rel="stylesheet" href="/site.css?v=d9fa9cb7">
 <script defer src="/analytics.js?v=b1ca7a7c"></script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Place","name":"Santa Fe","address":{"@type":"PostalAddress","addressLocality":"Santa Fe","addressRegion":"Santa Fe","addressCountry":"AR"},"geo":{"@type":"GeoCoordinates","latitude":-31.6333,"longitude":-60.7}}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Paraná Info","item":"https://rioparana.com.ar"},{"@type":"ListItem","position":2,"name":"Localidades","item":"https://rioparana.com.ar/rio/"},{"@type":"ListItem","position":3,"name":"Santa Fe","item":"https://rioparana.com.ar/rio/santa-fe/"}]}</script>
@@ -25,9 +25,15 @@
 
   <section class="river-now">
     <h2>El río hoy</h2>
-    <p class="river-figure"><span id="river-now" class="st-level">2.50 m · a 2.80 m del nivel de alerta</span></p>
+    <p class="river-figure"><span id="river-now" class="st-level" data-state="normal">2.50<span class="unit"> m</span></span></p>
+    <div id="river-gauge"><div class="gauge" role="img" aria-label="Nivel 2.50 m. Alerta a 5.30 m, evacuación a 5.70 m."><div class="gauge-track"><div class="gauge-fill" data-state="normal" style="width:40.61%"></div><span class="gauge-mark gauge-mark-alert gauge-mark-end" style="left:86.09%"><i></i><b>Alerta 5.30 m</b></span><span class="gauge-mark gauge-mark-evac gauge-mark-end" style="left:92.59%"><i></i><b>Evacuación 5.70 m</b></span></div></div></div>
+    <p id="river-margin" class="river-margin">A 2.80 m del nivel de alerta</p>
     <p id="river-src" class="stations-note">Medición de la Prefectura Naval Argentina en Santa Fe.</p>
     <p class="river-actions">
+      <button type="button" class="btn btn-primary share-wa" id="share-wa" hidden>
+        <span class="wa-icon" aria-hidden="true"></span>
+        <span>Enviar por WhatsApp</span>
+      </button>
       <button type="button" class="btn btn-ghost share-btn" id="share-river" hidden>
         <span class="share-icon" aria-hidden="true"></span>
         <span class="share-label" aria-live="polite">Compartir</span>
@@ -48,12 +54,12 @@
     <p class="stations-note trend-range"></p>
   </section>
 
-  <section>
-    <p class="lede">Santa Fe, Santa Fe. Sobre el Paraná Medio. La Prefectura mide la altura del río acá mismo, con alerta en 5.30 m y evacuación en 5.70 m. Hay 2 escuelas de kayak en el directorio.</p>
+  <section class="intro">
+    <p class="lede">Santa Fe, Santa Fe. Sobre el Paraná Medio. La Prefectura mide la altura del río acá mismo.</p>
   </section>
 
-  <section>
-    <h2>Escuelas de kayak en Santa Fe</h2>
+  <section class="svc-group">
+    <h2 class="svc-head"><svg class="svc-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 8l20 8"/><path d="M5 16c4.5 2.5 9.5 2.5 14 0"/><path d="M4 12h16"/></svg><span>Escuelas de kayak en Santa Fe</span></h2>
     <ul class="svc-list"><li><a href="https://www.instagram.com/setubal_kayaks/" rel="nofollow noopener" target="_blank">Setúbal Kayak's</a></li><li><a href="https://www.instagram.com/kayvaisantafe/" rel="nofollow noopener" target="_blank">Kayvai</a></li></ul>
   </section>
 
@@ -67,20 +73,118 @@
 (function(){
   var el = document.getElementById('river-now');
   if (!el) return;
+// The river height drawn as a scale.
+//
+// "2.42 m" answers nothing on its own: a reader cannot tell whether that is a
+// river to worry about. Against the heights at which Prefectura declares alert
+// and evacuation, the same number answers in a glance. Pure geometry, no DOM:
+// baked into the page at build time and recomputed in the browser from the
+// same file, so the two can never disagree.
+
+// The margin the app already uses to call a river "close to alert".
+const NEAR_ALERT_M = 1;
+// Headroom above evacuation so the top mark is not welded to the bar's end.
+const HEADROOM = 1.08;
+
+const num = (v) => (v === null || v === undefined || v === '' ? NaN : Number(v));
+
+/** Geometry and state, or null when there is no reference to measure against. */
+function gauge({ level, alertLevel, evacuationLevel } = {}) {
+  const l = num(level);
+  const alert = num(alertLevel);
+  const evac = num(evacuationLevel);
+  if (!Number.isFinite(l) || !Number.isFinite(alert)) return null;
+
+  const top = (Number.isFinite(evac) ? evac : alert) * HEADROOM;
+  // The scale runs from the hydrometric zero, which is the datum every one of
+  // these readings is quoted against. A hard bajante goes below it; the bar
+  // empties and `belowZero` lets the page say so in words, because an empty
+  // bar cannot distinguish -0.40 m from 0.00 m on its own.
+  const hi = Math.max(top, l);
+  const pos = (v) => (v / hi) * 100;
+
+  const state = Number.isFinite(evac) && l >= evac
+    ? 'evacuation'
+    : l >= alert
+      ? 'alert'
+      : alert - l <= NEAR_ALERT_M
+        ? 'near-alert'
+        : 'normal';
+
+  return {
+    fill: Math.max(0, Math.min(100, pos(l))),
+    alertAt: pos(alert),
+    evacAt: Number.isFinite(evac) ? pos(evac) : null,
+    state,
+    level: l,
+    alertLevel: alert,
+    evacuationLevel: Number.isFinite(evac) ? evac : null,
+    belowZero: l < 0,
+    hi,
+  };
+}
+
+/** The sentence under the bar: how much room is left, or that there is none. */
+function marginLabel(g) {
+  if (!g) return '';
+  if (g.state === 'evacuation') return 'Supera el nivel de evacuación';
+  if (g.state === 'alert') return 'Supera el nivel de alerta';
+
+  return `A ${(g.alertLevel - g.level).toFixed(2)} m del nivel de alerta`;
+}
+
+const pct = (n) => `${n.toFixed(2)}%`;
+const m = (n) => `${n.toFixed(2)} m`;
+
+// Past this point on the track a centred label hangs off the right edge, so it
+// is anchored to its mark instead.
+const END_ZONE = 70;
+const endClass = (at) => (at > END_ZONE ? ' gauge-mark-end' : '');
+
+/** The bar as markup. Pure, so it is testable without a browser. */
+function gaugeHtml(g) {
+  if (!g) return '';
+
+  const label =
+    `Nivel ${m(g.level)}. Alerta a ${m(g.alertLevel)}` +
+    (g.evacuationLevel === null ? '' : `, evacuación a ${m(g.evacuationLevel)}`) + '.';
+
+  const evac = g.evacAt === null
+    ? ''
+    : `<span class="gauge-mark gauge-mark-evac${endClass(g.evacAt)}" style="left:${pct(g.evacAt)}">` +
+      `<i></i><b>Evacuación ${m(g.evacuationLevel)}</b></span>`;
+
+  return (
+    `<div class="gauge" role="img" aria-label="${label}">` +
+    `<div class="gauge-track">` +
+    `<div class="gauge-fill" data-state="${g.state}" style="width:${pct(g.fill)}"></div>` +
+    `<span class="gauge-mark gauge-mark-alert${endClass(g.alertAt)}" style="left:${pct(g.alertAt)}">` +
+    `<i></i><b>Alerta ${m(g.alertLevel)}</b></span>${evac}` +
+    `</div></div>`
+  );
+}
+
   fetch('https://api.rioparana.com.ar/public/river', { headers: { Accept: 'application/json' } })
     .then(function(r){ if(!r.ok) throw 0; return r.json(); })
     .then(function(rows){
       var r = rows.filter(function(x){ return x.stationId === "santa-fe"; })[0];
       if (!r) return;
-      var txt = r.level.toFixed(2) + ' m';
-      if (typeof r.alertLevel === 'number') {
-        var d = r.alertLevel - r.level;
-        txt += d >= 0
-          ? ' · a ' + d.toFixed(2) + ' m del nivel de alerta'
-          : ' · supera el nivel de alerta';
+
+      var g = gauge({ level: r.level, alertLevel: 5.3, evacuationLevel: 5.7 });
+      // The figure carries the unit in its own span so the number stays the
+      // loudest thing on the page.
+      el.innerHTML = r.level.toFixed(2) + '<span class="unit"> m</span>';
+      el.setAttribute('data-state', g ? g.state : 'live');
+
+      var bar = document.getElementById('river-gauge');
+      if (bar && g) bar.innerHTML = gaugeHtml(g);
+
+      var margin = document.getElementById('river-margin');
+      if (margin && g) {
+        margin.textContent = marginLabel(g);
+        margin.hidden = false;
       }
-      el.textContent = txt;
-      el.setAttribute('data-state', typeof r.alertLevel === 'number' && r.alertLevel - r.level <= 1 ? 'near-alert' : 'live');
+
       var src = document.getElementById('river-src');
       if (src) src.hidden = false;
     })
@@ -346,10 +450,10 @@ function dayBadge(change) {
 <script>
 (function(){
   var btn = document.getElementById('share-river');
-  if (!btn) return;
+  var wa = document.getElementById('share-wa');
+  if (!btn || !wa) return;
   var canShare = typeof navigator.share === 'function';
   var canCopy = !!(navigator.clipboard && navigator.clipboard.writeText);
-  if (!canShare && !canCopy) return;
 // The message that gets forwarded to a WhatsApp group.
 //
 // Pure string building, no DOM: the page reads the values off the screen and
@@ -361,6 +465,8 @@ const PLACEHOLDER = /^[—\-\s]*$/;
 
 const reading = (level) => (!level || PLACEHOLDER.test(level) ? null : String(level).trim());
 
+const SIGNATURE = 'Vía Paraná Info';
+
 /** `{ title, text, url }` for navigator.share. */
 function sharePayload({ locality, level, alert, day, url }) {
   const title = `Altura del río Paraná en ${locality}`;
@@ -371,9 +477,21 @@ function sharePayload({ locality, level, alert, day, url }) {
   const head = m ? `${title}: ${m}${alert ? ` — ${alert}` : ''}` : title;
   // The Web Share API appends the url itself. Repeating it here would put the
   // link in the message twice.
-  const text = day ? `${head}\n${day}` : head;
+  const body = day ? `${head}\n${day}` : head;
+  // The message gets forwarded on from the chat it lands in, past anyone who
+  // knows where it came from. The signature is what tells a stranger.
+  const text = `${body}\n\n${SIGNATURE}`;
 
   return { title, text, url };
+}
+
+/**
+ * A WhatsApp share. `wa.me` with no phone number opens the chat chooser, and
+ * resolves to the app on a phone and to WhatsApp Web on a desktop, so this one
+ * link covers both without sniffing anything.
+ */
+function whatsappUrl(payload) {
+  return `https://wa.me/?text=${encodeURIComponent(clipboardText(payload))}`;
 }
 
 /** The same message for a clipboard, which appends nothing on its own. */
@@ -397,10 +515,11 @@ function clipboardText(payload) {
 
   function current(){
     var lvl = document.getElementById('river-now');
-    // "3.12 m · a 1.88 m del nivel de alerta" — the tail only travels when the
-    // page is actually flagging the river as close to alert.
-    var parts = (lvl ? lvl.textContent : '').split(' · ');
-    var near = lvl && lvl.getAttribute('data-state') === 'near-alert';
+    var margin = document.getElementById('river-margin');
+    var state = lvl ? lvl.getAttribute('data-state') : null;
+    // The distance to alert travels only when the page is actually flagging
+    // the river as close to it; the rest of the time it is noise.
+    var near = state === 'near-alert' || state === 'alert' || state === 'evacuation';
 
     var day = document.querySelector('.trend-day');
     var dayText = day && !day.hidden
@@ -412,12 +531,21 @@ function clipboardText(payload) {
     return sharePayload({
       locality: "Santa Fe",
       url: canonical ? canonical.href : location.href.split('?')[0],
-      level: parts[0],
-      alert: near ? parts[1] : null,
+      level: lvl ? lvl.textContent : '',
+      alert: near && margin ? margin.textContent : null,
       day: dayText
     });
   }
 
+  // WhatsApp is where this actually gets forwarded here, so it gets its own
+  // button rather than hiding one tap deeper inside the share sheet.
+  wa.hidden = false;
+  wa.addEventListener('click', function(){
+    track('whatsapp');
+    window.open(whatsappUrl(current()), '_blank', 'noopener');
+  });
+
+  if (!canShare && !canCopy) return;
   btn.hidden = false;
   btn.addEventListener('click', function(){
     var payload = current();

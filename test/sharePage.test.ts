@@ -16,6 +16,7 @@ function shareScript(): string {
 
 interface Options {
   level?: string;
+  margin?: string;
   state?: string;
   day?: [string, string] | null;
   share?: ((p: unknown) => Promise<void>) | null;
@@ -25,7 +26,8 @@ interface Options {
 function harness(opts: Options = {}) {
   const {
     level = '3.12 m',
-    state = 'live',
+    margin = 'A 1.88 m del nivel de alerta',
+    state = 'normal',
     day = ['Subió 8 cm', 'en las últimas 24 h'],
     share = async () => {},
     clipboard = { writeText: async () => {} },
@@ -39,10 +41,18 @@ function harness(opts: Options = {}) {
     addEventListener: (_: string, fn: () => void) => clicks.push(fn),
   };
 
+  const waClicks: Array<() => void> = [];
+  const waButton = {
+    hidden: true,
+    addEventListener: (_: string, fn: () => void) => waClicks.push(fn),
+  };
+
   const riverNow = {
     textContent: level,
     getAttribute: (name: string) => (name === 'data-state' ? state : null),
   };
+
+  const riverMargin = { textContent: margin };
 
   const trendDay = {
     hidden: day === null,
@@ -55,9 +65,13 @@ function harness(opts: Options = {}) {
   const copied: string[] = [];
   const events: Array<{ name: string; props: Record<string, unknown> }> = [];
 
+  const opened: string[] = [];
   const document = {
     getElementById: (id: string) =>
-      id === 'share-river' ? button : id === 'river-now' ? riverNow : null,
+      id === 'share-river' ? button
+        : id === 'share-wa' ? waButton
+          : id === 'river-now' ? riverNow
+            : id === 'river-margin' ? riverMargin : null,
     querySelector: (sel: string) =>
       sel === '.trend-day'
         ? trendDay
@@ -86,24 +100,37 @@ function harness(opts: Options = {}) {
     capture: (name: string, props: Record<string, unknown>) => events.push({ name, props }),
   };
 
-  new Function('document', 'navigator', 'location', 'posthog', 'setTimeout', shareScript())(
+  const window = {
+    open: (url: string) => {
+      opened.push(url);
+      return null;
+    },
+  };
+
+  new Function(
+    'document', 'navigator', 'location', 'posthog', 'setTimeout', 'window', shareScript(),
+  )(
     document,
     navigator,
     { pathname: '/rio/rosario/', href: 'https://rioparana.com.ar/rio/rosario/?utm=x' },
     posthog,
     () => 0,
+    window,
   );
 
   return {
     button,
+    waButton,
     label,
     shared,
     copied,
+    opened,
     events,
     click: async () => {
       clicks.forEach((fn) => fn());
       await new Promise((r) => setTimeout(r, 0));
     },
+    clickWhatsapp: () => waClicks.forEach((fn) => fn()),
   };
 }
 
@@ -123,31 +150,35 @@ describe('the published share script', () => {
 
     expect(h.shared[0]).toEqual({
       title: 'Altura del río Paraná en Rosario',
-      text: 'Altura del río Paraná en Rosario: 3.12 m\nSubió 8 cm en las últimas 24 h',
+      text: 'Altura del río Paraná en Rosario: 3.12 m\nSubió 8 cm en las últimas 24 h'
+        + '\n\nVía Paraná Info',
       url: 'https://rioparana.com.ar/rio/rosario/',
     });
   });
 
-  test('leaves the alert distance out when the page is not flagging it', async () => {
-    const h = harness({ level: '3.12 m · a 1.88 m del nivel de alerta', state: 'live' });
+  test('leaves the alert distance out when the river is nowhere near it', async () => {
+    const h = harness({ state: 'normal' });
     await h.click();
 
     expect((h.shared[0] as { text: string }).text).not.toContain('nivel de alerta');
   });
 
   test('carries the alert distance when the page is flagging it', async () => {
-    const h = harness({ level: '4.85 m · a 0.15 m del nivel de alerta', state: 'near-alert' });
+    const h = harness({
+      level: '4.85 m', margin: 'A 0.15 m del nivel de alerta', state: 'near-alert',
+    });
     await h.click();
 
     expect((h.shared[0] as { text: string }).text)
-      .toContain('4.85 m — a 0.15 m del nivel de alerta');
+      .toContain('4.85 m — A 0.15 m del nivel de alerta');
   });
 
   test('omits the day line while the badge is hidden', async () => {
     const h = harness({ day: null });
     await h.click();
 
-    expect((h.shared[0] as { text: string }).text).toBe('Altura del río Paraná en Rosario: 3.12 m');
+    expect((h.shared[0] as { text: string }).text)
+      .toBe('Altura del río Paraná en Rosario: 3.12 m\n\nVía Paraná Info');
   });
 
   test('shares the canonical url, not the one with tracking on it', async () => {
@@ -181,7 +212,7 @@ describe('the published share script', () => {
 
     expect(h.copied[0]).toBe(
       'Altura del río Paraná en Rosario: 3.12 m\nSubió 8 cm en las últimas 24 h\n' +
-      'https://rioparana.com.ar/rio/rosario/'
+      '\nVía Paraná Info\nhttps://rioparana.com.ar/rio/rosario/'
     );
     expect(h.label.textContent).toBe('Copiado');
     expect(h.events[0].props.method).toBe('clipboard');
@@ -196,5 +227,42 @@ describe('the published share script', () => {
 
     expect(h.label.textContent).toBe('No se pudo copiar');
     expect(h.events).toEqual([]);
+  });
+});
+
+describe('the WhatsApp button', () => {
+  test('is shown even where the browser can neither share nor copy', () => {
+    // wa.me is a plain link: it needs no API, so this stays the one path that
+    // always works.
+    const h = harness({ share: null, clipboard: null });
+
+    expect(h.waButton.hidden).toBe(false);
+  });
+
+  test('opens WhatsApp with the reading already written', () => {
+    const h = harness();
+    h.clickWhatsapp();
+
+    const sent = decodeURIComponent(h.opened[0].replace('https://wa.me/?text=', ''));
+    expect(sent).toBe(
+      'Altura del río Paraná en Rosario: 3.12 m\nSubió 8 cm en las últimas 24 h\n' +
+      '\nVía Paraná Info\nhttps://rioparana.com.ar/rio/rosario/'
+    );
+  });
+
+  test('names the site, so someone the message is forwarded to knows the source', () => {
+    const h = harness();
+    h.clickWhatsapp();
+
+    expect(decodeURIComponent(h.opened[0])).toContain('Vía Paraná Info');
+  });
+
+  test('counts itself apart from the generic share', () => {
+    const h = harness();
+    h.clickWhatsapp();
+
+    expect(h.events).toEqual([
+      { name: 'share_click', props: { method: 'whatsapp', page: '/rio/rosario/' } },
+    ]);
   });
 });

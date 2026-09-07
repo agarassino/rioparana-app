@@ -9,6 +9,8 @@ const PLACEHOLDER = /^[—\-\s]*$/;
 
 const reading = (level) => (!level || PLACEHOLDER.test(level) ? null : String(level).trim());
 
+const SIGNATURE = 'Vía Paraná Info';
+
 /** `{ title, text, url }` for navigator.share. */
 export function sharePayload({ locality, level, alert, day, url }) {
   const title = `Altura del río Paraná en ${locality}`;
@@ -19,9 +21,21 @@ export function sharePayload({ locality, level, alert, day, url }) {
   const head = m ? `${title}: ${m}${alert ? ` — ${alert}` : ''}` : title;
   // The Web Share API appends the url itself. Repeating it here would put the
   // link in the message twice.
-  const text = day ? `${head}\n${day}` : head;
+  const body = day ? `${head}\n${day}` : head;
+  // The message gets forwarded on from the chat it lands in, past anyone who
+  // knows where it came from. The signature is what tells a stranger.
+  const text = `${body}\n\n${SIGNATURE}`;
 
   return { title, text, url };
+}
+
+/**
+ * A WhatsApp share. `wa.me` with no phone number opens the chat chooser, and
+ * resolves to the app on a phone and to WhatsApp Web on a desktop, so this one
+ * link covers both without sniffing anything.
+ */
+export function whatsappUrl(payload) {
+  return `https://wa.me/?text=${encodeURIComponent(clipboardText(payload))}`;
 }
 
 /** The same message for a clipboard, which appends nothing on its own. */
