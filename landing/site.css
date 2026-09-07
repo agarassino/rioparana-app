@@ -414,3 +414,16 @@ a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visibl
   color: var(--color-muted); }
 /* With the day badge carrying the headline, the week steps down to context. */
 .trend-summary { font-size: var(--text-md); color: var(--color-ink-2); }
+
+/* Share. Hidden until the script confirms the browser can share or copy, so a
+   button that would do nothing is never painted. */
+.river-actions { margin-top: var(--space-sm); }
+.share-btn { background: transparent; }
+.share-icon { width: 1em; height: 1em; display: inline-block;
+  /* Drawn in CSS so the button costs no request and inherits the text colour. */
+  background: currentColor;
+  -webkit-mask: var(--share-glyph) center / contain no-repeat;
+  mask: var(--share-glyph) center / contain no-repeat; }
+:root {
+  --share-glyph: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="10.5" x2="15.4" y2="6.5"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/></svg>');
+}

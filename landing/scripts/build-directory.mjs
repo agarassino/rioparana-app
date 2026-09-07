@@ -50,8 +50,11 @@ const CSS = { tokens: stamp('/tokens.css'), site: stamp('/site.css'), analytics:
 // under 3 kB, it paints without a second round trip, and a new /sparkline.js
 // would need its own COPY line in the Dockerfile — which is exactly how the
 // /rio/* pages once shipped as 404s.
-const SPARKLINE_SRC = readFileSync(join(ROOT, 'scripts/sparkline.mjs'), 'utf8')
-  .replace(/^export /gm, '');
+const inlineModule = (file) =>
+  readFileSync(join(ROOT, file), 'utf8').replace(/^export /gm, '');
+
+const SPARKLINE_SRC = inlineModule('scripts/sparkline.mjs');
+const SHARE_SRC = inlineModule('scripts/share.mjs');
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
   .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -217,6 +220,83 @@ const TREND_SECTION = `
     <p class="stations-note trend-range"></p>
   </section>`;
 
+// Forwarding a reading to a WhatsApp group is how this page travels between
+// people who fish together. The button ships hidden and appears only where the
+// browser can actually share or copy: a button that does nothing is worse than
+// no button.
+function shareScript(nombre) {
+  return `
+<script>
+(function(){
+  var btn = document.getElementById('share-river');
+  if (!btn) return;
+  var canShare = typeof navigator.share === 'function';
+  var canCopy = !!(navigator.clipboard && navigator.clipboard.writeText);
+  if (!canShare && !canCopy) return;
+${SHARE_SRC}
+  var label = btn.querySelector('.share-label');
+  var idle = label.textContent;
+
+  function said(word){
+    label.textContent = word;
+    setTimeout(function(){ label.textContent = idle; }, 2000);
+  }
+
+  function track(method){
+    if (typeof posthog !== 'undefined') {
+      posthog.capture('share_click', { method: method, page: location.pathname });
+    }
+  }
+
+  function current(){
+    var lvl = document.getElementById('river-now');
+    // "3.12 m · a 1.88 m del nivel de alerta" — the tail only travels when the
+    // page is actually flagging the river as close to alert.
+    var parts = (lvl ? lvl.textContent : '').split(' · ');
+    var near = lvl && lvl.getAttribute('data-state') === 'near-alert';
+
+    var day = document.querySelector('.trend-day');
+    var dayText = day && !day.hidden
+      ? day.querySelector('.trend-day-text').textContent + ' ' +
+        day.querySelector('.trend-day-detail').textContent
+      : '';
+
+    var canonical = document.querySelector('link[rel="canonical"]');
+    return sharePayload({
+      locality: ${JSON.stringify(nombre)},
+      url: canonical ? canonical.href : location.href.split('?')[0],
+      level: parts[0],
+      alert: near ? parts[1] : null,
+      day: dayText
+    });
+  }
+
+  btn.hidden = false;
+  btn.addEventListener('click', function(){
+    var payload = current();
+    if (canShare) {
+      // A cancelled share is not a share: let it reject quietly rather than
+      // counting it or showing the copy confirmation.
+      navigator.share(payload).then(function(){ track('native'); }, function(){});
+      return;
+    }
+    navigator.clipboard.writeText(clipboardText(payload)).then(function(){
+      said('Copiado');
+      track('clipboard');
+    }, function(){ said('No se pudo copiar'); });
+  });
+})();
+</script>`;
+}
+
+const SHARE_BUTTON = `
+    <p class="river-actions">
+      <button type="button" class="btn btn-ghost share-btn" id="share-river" hidden>
+        <span class="share-icon" aria-hidden="true"></span>
+        <span class="share-label" aria-live="polite">Compartir</span>
+      </button>
+    </p>`;
+
 function localityPage(loc) {
   const estLoc = nearestStationLocality(loc, localidades);
   const prestada = estLoc && estLoc.slug !== loc.slug;
@@ -265,7 +345,7 @@ function localityPage(loc) {
       prestada
         ? `Lectura de la estación ${esc(estLoc.nombre)}, a ${Math.round(distanceKm(loc, estLoc))} km. ${esc(loc.nombre)} no tiene hidrómetro propio.`
         : `Medición de la Prefectura Naval Argentina en ${esc(loc.nombre)}.`
-    }</p>
+    }</p>${SHARE_BUTTON}
   </section>
 ${TREND_SECTION}
 
@@ -285,6 +365,7 @@ ${grouped.map(([t, list]) => `
 </main>
 ${riverScript(estLoc ? estLoc.estacion : null, prestada)}
 ${trendScript(estLoc ? estLoc.estacion : null, estLoc ? estLoc.alerta : null)}
+${shareScript(loc.nombre)}
 ${FOOT}`;
 }
 

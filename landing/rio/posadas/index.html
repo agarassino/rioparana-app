@@ -7,7 +7,7 @@
 <meta name="description" content="Altura del río Paraná en Posadas hoy, según Prefectura Naval Argentina. Nivel en tiempo real, alerta en 11 m y evacuación en 12 m. Un servicio náutico y de pesca en la zona.">
 <link rel="canonical" href="https://rioparana.com.ar/rio/posadas/">
 <link rel="stylesheet" href="/tokens.css?v=7af02e26">
-<link rel="stylesheet" href="/site.css?v=23d1716a">
+<link rel="stylesheet" href="/site.css?v=34d9f85c">
 <script defer src="/analytics.js?v=d5b76b1d"></script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Place","name":"Posadas","address":{"@type":"PostalAddress","addressLocality":"Posadas","addressRegion":"Misiones","addressCountry":"AR"},"geo":{"@type":"GeoCoordinates","latitude":-27.3667,"longitude":-55.8967}}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Paraná Info","item":"https://rioparana.com.ar"},{"@type":"ListItem","position":2,"name":"Localidades","item":"https://rioparana.com.ar/rio/"},{"@type":"ListItem","position":3,"name":"Posadas","item":"https://rioparana.com.ar/rio/posadas/"}]}</script>
@@ -26,6 +26,12 @@
     <h2>El río hoy</h2>
     <p class="river-figure"><span id="river-now" class="st-level">10.13 m · a 0.87 m del nivel de alerta</span></p>
     <p id="river-src" class="stations-note">Medición de la Prefectura Naval Argentina en Posadas.</p>
+    <p class="river-actions">
+      <button type="button" class="btn btn-ghost share-btn" id="share-river" hidden>
+        <span class="share-icon" aria-hidden="true"></span>
+        <span class="share-label" aria-live="polite">Compartir</span>
+      </button>
+    </p>
   </section>
 
   <section class="river-trend" id="river-trend" hidden>
@@ -320,6 +326,98 @@ function dayBadge(change) {
       sec.hidden = false;
     })
     .catch(function(){});
+})();
+</script>
+
+<script>
+(function(){
+  var btn = document.getElementById('share-river');
+  if (!btn) return;
+  var canShare = typeof navigator.share === 'function';
+  var canCopy = !!(navigator.clipboard && navigator.clipboard.writeText);
+  if (!canShare && !canCopy) return;
+// The message that gets forwarded to a WhatsApp group.
+//
+// Pure string building, no DOM: the page reads the values off the screen and
+// hands them here, so what is shared is exactly what the reader was looking at.
+
+// The page shows an em dash until the API answers. Forwarding "Rosario: —" is
+// worse than forwarding nothing, so a placeholder is treated as no reading.
+const PLACEHOLDER = /^[—\-\s]*$/;
+
+const reading = (level) => (!level || PLACEHOLDER.test(level) ? null : String(level).trim());
+
+/** `{ title, text, url }` for navigator.share. */
+function sharePayload({ locality, level, alert, day, url }) {
+  const title = `Altura del río Paraná en ${locality}`;
+  const m = reading(level);
+
+  // The distance to the alert height only travels when the river is close
+  // enough for it to mean something; the page decides that, not this function.
+  const head = m ? `${title}: ${m}${alert ? ` — ${alert}` : ''}` : title;
+  // The Web Share API appends the url itself. Repeating it here would put the
+  // link in the message twice.
+  const text = day ? `${head}\n${day}` : head;
+
+  return { title, text, url };
+}
+
+/** The same message for a clipboard, which appends nothing on its own. */
+function clipboardText(payload) {
+  return `${payload.text}\n${payload.url}`;
+}
+
+  var label = btn.querySelector('.share-label');
+  var idle = label.textContent;
+
+  function said(word){
+    label.textContent = word;
+    setTimeout(function(){ label.textContent = idle; }, 2000);
+  }
+
+  function track(method){
+    if (typeof posthog !== 'undefined') {
+      posthog.capture('share_click', { method: method, page: location.pathname });
+    }
+  }
+
+  function current(){
+    var lvl = document.getElementById('river-now');
+    // "3.12 m · a 1.88 m del nivel de alerta" — the tail only travels when the
+    // page is actually flagging the river as close to alert.
+    var parts = (lvl ? lvl.textContent : '').split(' · ');
+    var near = lvl && lvl.getAttribute('data-state') === 'near-alert';
+
+    var day = document.querySelector('.trend-day');
+    var dayText = day && !day.hidden
+      ? day.querySelector('.trend-day-text').textContent + ' ' +
+        day.querySelector('.trend-day-detail').textContent
+      : '';
+
+    var canonical = document.querySelector('link[rel="canonical"]');
+    return sharePayload({
+      locality: "Posadas",
+      url: canonical ? canonical.href : location.href.split('?')[0],
+      level: parts[0],
+      alert: near ? parts[1] : null,
+      day: dayText
+    });
+  }
+
+  btn.hidden = false;
+  btn.addEventListener('click', function(){
+    var payload = current();
+    if (canShare) {
+      // A cancelled share is not a share: let it reject quietly rather than
+      // counting it or showing the copy confirmation.
+      navigator.share(payload).then(function(){ track('native'); }, function(){});
+      return;
+    }
+    navigator.clipboard.writeText(clipboardText(payload)).then(function(){
+      said('Copiado');
+      track('clipboard');
+    }, function(){ said('No se pudo copiar'); });
+  });
 })();
 </script>
 
