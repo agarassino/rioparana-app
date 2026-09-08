@@ -139,6 +139,12 @@ describe('trendSummary', () => {
     expect(trendSummary(line(3, 3.004, 4))).toBe('Estable en los últimos 4 días');
   });
 
+  test('agrees with itself in the singular', () => {
+    // With one day of history this read "Estable en los últimos 1 día", which
+    // only shows up once there is real data to draw.
+    expect(trendSummary(line(3, 3.002, 1))).toBe('Estable en el último día');
+  });
+
   test('says nothing when there is no line', () => {
     expect(trendSummary(null)).toBe('');
   });

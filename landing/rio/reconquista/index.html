@@ -23,9 +23,9 @@
 
   <section class="river-now">
     <h2>El río hoy</h2>
-    <p class="river-figure"><span id="river-now" class="st-level" data-state="normal">2.71<span class="unit"> m</span></span></p>
-    <div id="river-gauge"><div class="gauge" role="img" aria-label="Nivel 2.71 m. Alerta a 5.10 m, evacuación a 5.30 m."><div class="gauge-track"><div class="gauge-fill" data-state="normal" style="width:47.34%"></div><span class="gauge-mark gauge-mark-alert gauge-mark-end" style="left:89.10%"><i></i><b>Alerta 5.10 m</b></span><span class="gauge-mark gauge-mark-evac gauge-mark-end" style="left:92.59%"><i></i><b>Evacuación 5.30 m</b></span></div></div></div>
-    <p id="river-margin" class="river-margin">A 2.39 m del nivel de alerta</p>
+    <p class="river-figure"><span id="river-now" class="st-level" data-state="normal">2.78<span class="unit"> m</span></span></p>
+    <div id="river-gauge"><div class="gauge" role="img" aria-label="Nivel 2.78 m. Alerta a 5.10 m, evacuación a 5.30 m."><div class="gauge-track"><div class="gauge-fill" data-state="normal" style="width:48.57%"></div><span class="gauge-mark gauge-mark-alert gauge-mark-end" style="left:89.10%"><i></i><b>Alerta 5.10 m</b></span><span class="gauge-mark gauge-mark-evac gauge-mark-end" style="left:92.59%"><i></i><b>Evacuación 5.30 m</b></span></div></div></div>
+    <p id="river-margin" class="river-margin">A 2.32 m del nivel de alerta</p>
     <p id="river-src" class="stations-note">Medición de la Prefectura Naval Argentina en Reconquista.</p>
     <p class="river-actions">
       <button type="button" class="btn btn-primary share-wa" id="share-wa" hidden>
@@ -286,7 +286,10 @@ function trendSummary(line) {
 
   // Prefectura publishes centimetres. Anything under one is noise in the
   // reading, not a river that moved.
-  if (cm === 0) return `Estable en ${days >= 1 ? `los últimos ${span}` : span}`;
+  if (cm === 0) {
+    if (days < 1) return `Estable en ${span}`;
+    return days === 1 ? 'Estable en el último día' : `Estable en los últimos ${span}`;
+  }
 
   return `${cm > 0 ? 'Subió' : 'Bajó'} ${Math.abs(cm)} cm en ${span}`;
 }

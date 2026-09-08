@@ -96,6 +96,10 @@ describe('trendSummary', () => {
     expect(over(3, 3.004, 4)).toBe('Estable en los últimos 4 días');
   });
 
+  test('agrees with itself in the singular', () => {
+    expect(over(3, 3.002, 1)).toBe('Estable en el último día');
+  });
+
   test('says nothing without a line', () => {
     expect(trendSummary(null)).toBe('');
   });

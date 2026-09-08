@@ -115,7 +115,10 @@ export function trendSummary(line: SparkLine | null): string {
 
   // Prefectura publishes centimetres. Under one is noise in the reading, not a
   // river that moved.
-  if (cm === 0) return `Estable en ${days >= 1 ? `los últimos ${span}` : span}`;
+  if (cm === 0) {
+    if (days < 1) return `Estable en ${span}`;
+    return days === 1 ? 'Estable en el último día' : `Estable en los últimos ${span}`;
+  }
 
   return `${cm > 0 ? 'Subió' : 'Bajó'} ${Math.abs(cm)} cm en ${span}`;
 }
