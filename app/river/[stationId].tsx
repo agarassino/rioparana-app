@@ -1,10 +1,17 @@
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
+import {
+  View, Text, ScrollView, StyleSheet, ActivityIndicator, Pressable, Share,
+} from 'react-native';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { FontAwesome6 } from '@expo/vector-icons';
 
 import { Card, Badge } from '../../src/components/ui';
 import { RiverAlert } from '../../src/components/RiverAlert';
-import { useWaterLevel, useWeather, useDevicePing } from '../../src/hooks';
+import { RiverGauge } from '../../src/components/RiverGauge';
+import { RiverTrend } from '../../src/components/RiverTrend';
+import { useWaterLevel, useWeather, useDevicePing, useRiverHistory } from '../../src/hooks';
+import { CHART_DAYS, dayChange, lastDays } from '../../src/services/riverTrend';
+import { shareMessage } from '../../src/services/riverShare';
+import { localitySlugFor } from '../../src/config/localityPages';
 import { getStationById } from '../../src/config/stations';
 import { calculateFishingCondition } from '../../src/services/api/riverApi';
 import { FEATURES } from '../../src/config/features';
@@ -22,6 +29,22 @@ export default function StationDetailScreen() {
     station?.latitude || 0,
     station?.longitude || 0
   );
+  // Read here as well as inside RiverTrend so the shared message can carry what
+  // the river did since yesterday. React Query serves both from one request.
+  const { data: history } = useRiverHistory(stationId || '');
+
+  const onShare = async () => {
+    if (!station || !waterLevel) return;
+    const day = dayChange(lastDays(history ?? [], CHART_DAYS, new Date()), new Date());
+    try {
+      await Share.share({
+        message: shareMessage(station.name, waterLevel, day, localitySlugFor(station.id)),
+      });
+    } catch {
+      // A share the reader dismissed, or a sheet that would not open. Neither
+      // is worth interrupting the screen for.
+    }
+  };
 
   if (!station) {
     return (
@@ -102,15 +125,31 @@ export default function StationDetailScreen() {
                   </Text>
                 </View>
               </View>
+              {/* The number alone cannot say whether 2.42 m is a lot. The bar
+                  answers that against the heights Prefectura publishes. */}
+              <RiverGauge level={waterLevel} />
               <RiverAlert level={waterLevel} />
               <Text style={styles.timestamp}>
                 Actualizado: {format(waterLevel.timestamp, "d 'de' MMMM, HH:mm", { locale: es })}
               </Text>
+              <Pressable
+                onPress={onShare}
+                style={({ pressed }) => [styles.shareBtn, pressed && styles.shareBtnPressed]}
+                accessibilityRole="button"
+                accessibilityLabel={`Compartir la altura del río en ${station.name}`}
+              >
+                <FontAwesome6 name="share-nodes" size={14} color={COLORS.river} />
+                <Text style={styles.shareText}>Compartir</Text>
+              </Pressable>
             </>
           ) : (
             <Text style={styles.noData}>Sin datos disponibles</Text>
           )}
         </Card>
+
+        {/* Renders nothing at all until there are two readings to join, so a
+            station with no history yet looks as it did before this existed. */}
+        <RiverTrend stationId={station.id} />
 
         {/* Clima */}
         <Card>
@@ -186,6 +225,24 @@ const styles = StyleSheet.create({
   trendText: { marginLeft: 6, fontSize: FONT_SIZES.base, fontFamily: 'Nunito_600SemiBold' },
   timestamp: { fontSize: FONT_SIZES.xs, color: COLORS.earthLight, marginTop: SPACING.md, fontFamily: 'Nunito_400Regular' },
   noData: { color: COLORS.earthLight, fontFamily: 'Nunito_400Regular' },
+  shareBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginTop: SPACING.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 9,
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.river,
+  },
+  shareBtnPressed: { backgroundColor: COLORS.infoLight },
+  shareText: {
+    marginLeft: 8,
+    fontSize: FONT_SIZES.base,
+    color: COLORS.river,
+    fontFamily: 'Nunito_600SemiBold',
+  },
   weatherRow: { flexDirection: 'row', alignItems: 'center' },
   weatherInfo: { marginLeft: SPACING.md, flex: 1 },
   tempValue: { fontSize: FONT_SIZES['3xl'], color: COLORS.earthDark, fontFamily: 'Nunito_700Bold' },

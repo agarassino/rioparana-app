@@ -270,3 +270,45 @@ export async function pingDevice(deviceId: string, stationId?: string): Promise<
     timeout.clear();
   }
 }
+
+export interface HistoryPoint {
+  timestamp: string;
+  level: number;
+}
+
+function isHistoryPoint(value: unknown): value is HistoryPoint {
+  if (typeof value !== 'object' || value === null) return false;
+
+  const p = value as Partial<HistoryPoint>;
+  return (
+    typeof p.level === 'number' &&
+    Number.isFinite(p.level) &&
+    typeof p.timestamp === 'string' &&
+    Number.isFinite(Date.parse(p.timestamp))
+  );
+}
+
+// Past readings for one station, so the app can show where the river has been.
+// Public like the rest of the river data: no key travels with it, which also
+// means the chart keeps working if the key baked into an old build goes stale.
+// Returns an empty list on any failure, so a screen degrades to "no chart yet"
+// rather than throwing.
+export async function getBackendHistory(stationId: string): Promise<HistoryPoint[]> {
+  const timeout = withTimeout(REQUEST_TIMEOUT_MS);
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/public/river/${encodeURIComponent(stationId)}/history`,
+      { headers: { Accept: 'application/json' }, signal: timeout.signal }
+    );
+    if (!res.ok) return [];
+
+    const body: unknown = await res.json();
+    if (!Array.isArray(body)) return [];
+
+    return body.filter(isHistoryPoint);
+  } catch {
+    return [];
+  } finally {
+    timeout.clear();
+  }
+}
