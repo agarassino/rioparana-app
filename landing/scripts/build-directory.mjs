@@ -503,22 +503,25 @@ ${FOOT}`;
 function indexPage() {
   const jsonld = [{ '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
     { '@type': 'ListItem', position: 1, name: 'Paraná Info', item: SITE },
-    { '@type': 'ListItem', position: 2, name: 'Localidades', item: `${SITE}/rio/` },
+    { '@type': 'ListItem', position: 2, name: 'Altura del río Paraná', item: `${SITE}/rio/` },
   ] }];
 
   return head({
-    title: 'Localidades del río Paraná — altura y servicios | Paraná Info',
-    description: `Altura del río Paraná y servicios náuticos y de pesca en ${published.length} localidades, del Alto Paraná al Delta.`,
+    title: 'Altura del río Paraná hoy — nivel del agua en todas las localidades | Paraná Info',
+    description: `Altura del río Paraná hoy en ${published.length} localidades, del Alto Paraná al Delta. Nivel del agua de la Prefectura Naval y servicios náuticos y de pesca.`,
     canonical: `${SITE}/rio/`, jsonld,
   }) + `
 <main class="wrap" style="padding-top:2rem">
-  <nav class="crumbs"><a href="/">Inicio</a> › Localidades</nav>
-  <h1>Localidades del río Paraná</h1>
-  <p class="lede">Del Alto Paraná al Delta. Cada localidad muestra la altura del río y los servicios listados.</p>
+  <nav class="crumbs"><a href="/">Inicio</a> › Altura del río Paraná</nav>
+  <h1>Altura del río Paraná hoy</h1>
+  <p class="lede">Nivel del agua en cada localidad, del Alto Paraná al Delta. Medición de la Prefectura Naval Argentina.</p>
   <ul class="stations-grid">${published.map((l) => {
     const n = (byLocality.get(l.slug) ?? []).length;
-    return `<li><a href="/rio/${l.slug}/">${esc(l.nombre)}</a> <span class="muted">${esc(l.provincia)}${n ? ` · ${n}` : ''}</span></li>`;
+    const lectura = bakedReading(l);
+    const nivel = lectura.level ? ` · ${esc(lectura.level)}` : '';
+    return `<li><a href="/rio/${l.slug}/">${esc(l.nombre)}</a> <span class="muted">${esc(l.provincia)}${nivel}${n ? ` · ${n} serv.` : ''}</span></li>`;
   }).join('')}</ul>
+  <p class="stations-note">Niveles de referencia del último build. Cada localidad enlaza a su lectura actualizada de la Prefectura Naval.</p>
 </main>
 ${FOOT}`;
 }
