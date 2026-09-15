@@ -312,3 +312,69 @@ export async function getBackendHistory(stationId: string): Promise<HistoryPoint
     timeout.clear();
   }
 }
+
+export interface StoredNotification {
+  id: string;
+  stationId: string;
+  title: string;
+  body: string;
+  sentAt: string;
+}
+
+function isStoredNotification(value: unknown): value is StoredNotification {
+  if (typeof value !== 'object' || value === null) return false;
+
+  const n = value as Partial<StoredNotification>;
+  return (
+    typeof n.id === 'string' &&
+    typeof n.stationId === 'string' &&
+    typeof n.title === 'string' &&
+    typeof n.body === 'string' &&
+    typeof n.sentAt === 'string' &&
+    Number.isFinite(Date.parse(n.sentAt))
+  );
+}
+
+// Register, replace, or clear this device's push token. Null turns
+// notifications off. Never throws: it runs on app start, and a rejected
+// promise there would take a screen down over something nobody asked for.
+export async function registerPushToken(
+  deviceId: string,
+  pushToken: string | null
+): Promise<void> {
+  const timeout = withTimeout(REQUEST_TIMEOUT_MS);
+  try {
+    await fetch(`${API_BASE_URL}/devices/push-token`, {
+      method: 'POST',
+      headers: { 'x-api-key': API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deviceId, pushToken }),
+      signal: timeout.signal,
+    });
+  } catch {
+    // Registration retries on the next launch; it is not worth a visible error.
+  } finally {
+    timeout.clear();
+  }
+}
+
+// What this device was sent. Read from the server rather than kept on the
+// device, so the list survives a reinstall and matches what was really sent.
+export async function getNotificationHistory(deviceId: string): Promise<StoredNotification[]> {
+  const timeout = withTimeout(REQUEST_TIMEOUT_MS);
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/notifications?deviceId=${encodeURIComponent(deviceId)}`,
+      { headers: { 'x-api-key': API_KEY, Accept: 'application/json' }, signal: timeout.signal }
+    );
+    if (!res.ok) return [];
+
+    const body: unknown = await res.json();
+    if (!Array.isArray(body)) return [];
+
+    return body.filter(isStoredNotification);
+  } catch {
+    return [];
+  } finally {
+    timeout.clear();
+  }
+}

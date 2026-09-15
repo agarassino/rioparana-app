@@ -4,3 +4,5 @@ export { useLocation } from './useLocation';
 export { useNews } from './useNews';
 export { useDevicePing } from './useDevicePing';
 export { useRiverHistory } from './useRiverHistory';
+export { usePushRegistration } from './usePushRegistration';
+export { useNotificationHistory } from './useNotificationHistory';

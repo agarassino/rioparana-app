@@ -1,9 +1,12 @@
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
+import { Pressable } from 'react-native';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { FEATURES } from '../../src/config/features';
 import { COLORS } from '../../src/config/theme';
 
 export default function TabLayout() {
+  const router = useRouter();
+
   return (
     <Tabs
       screenOptions={{
@@ -35,6 +38,19 @@ export default function TabLayout() {
           title: 'Inicio',
           headerTitle: 'PARANA INFO',
           tabBarIcon: ({ color }) => <FontAwesome6 name="house" size={20} color={color} />,
+          // The only way in other than tapping a notification, which is a dead
+          // end for anyone wanting to read the ones they already dismissed.
+          headerRight: () => (
+            <Pressable
+              onPress={() => router.push('/notificaciones')}
+              hitSlop={12}
+              style={{ paddingHorizontal: 16 }}
+              accessibilityRole="button"
+              accessibilityLabel="Ver notificaciones"
+            >
+              <FontAwesome6 name="bell" size={18} color={COLORS.cream} />
+            </Pressable>
+          ),
         }}
       />
       <Tabs.Screen
