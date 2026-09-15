@@ -2,163 +2,122 @@
 
 Fuente única para el texto y los gráficos de la ficha.
 
-Cada afirmación está verificada contra el código: 10 estaciones en
-`server/src/config/stations.ts`, campos de clima en `src/types/index.ts`, y las
-pantallas del build 2.0.2 (versionCode 8).
+Cada afirmación está verificada contra lo que realmente shipea. Los números de
+esta versión se comprobaron el 2026-09-15 contra `GET /public/river`
+(38 estaciones), `landing/parana-map.geojson` (997 puntos) y el build 2.1.0
+(versionCode 13).
+
+**Regla de la casa**: ningún número entra acá de memoria. Se verifica contra el
+artefacto antes de escribirlo. La ficha ya fue rechazada una vez por una
+afirmación que el código no sostenía.
 
 ---
 
-## Corrección bloqueante: "en tiempo real"
+## Historial de correcciones
 
-El texto cargado en Console el 2026-08-14 dice, en la descripción completa:
+### "en tiempo real" — corregido
+Decía "Consultá el nivel del río Paraná **en tiempo real**". El nivel viene de
+un caché que se refresca cuando Prefectura publica, dos veces por día. Sacado
+de la ficha en septiembre 2026.
 
-> Consultá el nivel del río Paraná **en tiempo real** desde las estaciones de
-> Prefectura Naval Argentina.
+### "Condiciones actuales de pesca" — corregido
+La ficha lo prometía bajo 🎣 PARA PESCADORES. `FEATURES.FISHING_ENABLED` está
+en `false`, así que la pestaña, el badge y el consejo de pesca **no aparecen**.
+Prometer una función detrás de un flag apagado es el mismo tipo de error que
+causó el rechazo anterior. Sacado en septiembre 2026.
 
-**Esa frase hay que sacarla antes de enviar a revisión.** Medido ese mismo día
-contra la API de producción: Rosario y Paraná tenían timestamp del 31 de julio,
-y Barranqueras estaba vacía (`no data yet`). La captura `02-tendencia.png`
-muestra en pantalla "Actualizado: 31 de julio".
+> Si algún día se enciende `FISHING_ENABLED`, este bullet puede volver.
 
-Prometer tiempo real con un screenshot que exhibe un dato de dos semanas atrás
-es exactamente el patrón que motivó el rechazo por misleading claims. Reemplazo:
-
-```
-Consultá la altura del río Paraná en 10 estaciones, con la información pública de Prefectura Naval Argentina.
-```
-
-Se puede volver a "tiempo real" cuando el caché del río se mantenga fresco, que
-depende de resolver el crowd-push sin usuarios.
+### "+10 estaciones" — corregido
+Quedó de cuando el config tenía 10. Desde `37e4027` son 38, y las estadísticas
+de uso muestran que **16 de las 26 estaciones más consultadas no existían** en
+aquella versión. Subestimarlo dejaba valor sin contar.
 
 ---
 
-## Título (máx. 30 caracteres)
-
-Cargado en Console — 25 caracteres, correcto, no es necesario tocarlo:
+## Título y subtítulo
 
 ```
-Río Paraná: nivel y clima
+Paraná Info — Altura del río
 ```
 
-Refinamiento opcional — 26 caracteres. `altura del río paraná` tiene más volumen
-de búsqueda que `nivel`, pero la ganancia es marginal:
-
 ```
-Río Paraná: altura y clima
+Altura del río Paraná en 38 estaciones, con clima y pronóstico a 7 días.
 ```
 
-El título original, `Río Paraná App - Info del rio`, gastaba 18 de sus 29
-caracteres en `App - Info del rio`, que no aporta valor de búsqueda y además
-llevaba `rio` sin tilde.
-
----
-
-## Descripción corta (máx. 80 caracteres)
-
-El texto cargado dice `...clima y pronóstico por estación para pesca y
-navegación`. **`por estación` se lee como estación del año**, sobre todo pegado a
-`pronóstico`. La intención era estación de monitoreo.
-
-**Reemplazo — 72 caracteres**
+## Descripción
 
 ```
-Altura del río Paraná en 10 estaciones, con clima y pronóstico a 7 días.
+🌊 ¿A cuánto está el río hoy? Consultá la altura del Paraná en 38 estaciones,
+del Alto Paraná al Delta, con la información pública de Prefectura Naval
+Argentina.
+
+Ideal para pescadores, navegantes y amantes del río.
+
+📍 38 ESTACIONES DE PREFECTURA
+• Del Alto Paraná al Delta: Posadas, Ituzaingó, Corrientes, Goya, La Paz,
+  Santa Fe, Paraná, Diamante, Victoria, Rosario, San Nicolás, Zárate, Tigre
+  y 25 más
+
+📊 CÓMO VIENE EL RÍO
+• La altura contra los niveles de alerta y evacuación
+• Los últimos 7 días
+• Cuánto subió o bajó desde ayer
+
+🔔 NOTIFICACIONES
+• Cada mañana, la altura en la estación que más consultás
+• Todas las anteriores quedan guardadas en la app
+
+📤 COMPARTIR
+• Mandá la altura por WhatsApp, con el dato ya escrito
+
+🌤️ CLIMA
+• Temperatura actual, viento y humedad
+• Pronóstico de 7 días
+
+🗺️ MAPA
+• Casi 1.000 puntos de pesca y navegación
+
+Los datos de altura son información pública de la Prefectura Naval Argentina.
+Paraná Info es una aplicación independiente y no está afiliada a ningún
+organismo público.
+
+Emergencia náutica: 106
 ```
 
-El número concreto además es verificable y da confianza; `por estación` no
-comunica nada.
-
----
-
-## Descripción completa (máx. 4000 caracteres)
-
-El texto de abajo es el recomendado completo. Si se conserva el que ya está
-cargado, las correcciones mínimas son tres:
-
-1. Sacar `en tiempo real` (ver arriba).
-2. Reemplazar la apertura `🌊 RÍO PARANÁ - Tu app para el río` por la pregunta
-   que el usuario ya tiene en la cabeza: Google pondera las primeras líneas y
-   son las únicas visibles sin desplegar "Más".
-3. Verificar que el descargo de independencia esté presente. Es obligatorio para
-   apps que comunican información gubernamental y es el antecedente directo del
-   rechazo anterior.
-
+## Novedades — 2.1.0 (versionCode 13)
 
 ```
-¿A cuánto está el río hoy? Consultá la altura del Paraná en 10 estaciones, desde Corrientes hasta San Lorenzo, con la tendencia de las últimas horas.
+Recibí cada mañana la altura del río en la estación que más consultás, y
+revisá las anteriores desde la campana en el inicio.
 
-Paraná Info reúne en una sola pantalla lo que necesitás antes de salir: nivel del río, clima actual y pronóstico a 7 días.
-
-La app detecta la estación más cercana a tu ubicación y te muestra su altura apenas la abrís.
-
-QUÉ ENCONTRÁS
-
-• Altura del río en 10 estaciones: Corrientes, Barranqueras, Goya, Reconquista, Santa Fe, Paraná, Rosario, San Nicolás, Villa Constitución y San Lorenzo.
-• Tendencia del nivel: si el río viene subiendo, bajando o estable.
-• Estación más cercana según tu ubicación, sin buscarla a mano.
-• Clima actual: temperatura, sensación térmica, viento y humedad.
-• Pronóstico a 7 días para planificar la salida.
-• Noticias de Prefectura Naval Argentina.
-• Acceso directo al 106, el número de emergencias náuticas.
-
-PARA QUIÉNES
-
-Si vivís sobre el río, navegás o pescás, la altura del Paraná te cambia el día. Una bajante deja bancos de arena donde antes pasabas tranquilo; una creciente te cambia las orillas y las condiciones. Saber a cuánto está el río antes de salir es la diferencia entre una jornada tranquila y un problema.
-
-También sirve si seguís la evolución del río por trabajo: actividad portuaria, tareas ribereñas, turismo, o simplemente porque te interesa cómo viene.
-
-DE DÓNDE SALEN LOS DATOS
-
-• Alturas hidrométricas: información pública de Prefectura Naval Argentina.
-• Clima y pronóstico: Open-Meteo.
-
-Paraná Info es una aplicación independiente. No pertenece a Prefectura Naval Argentina ni a ningún organismo público, ni está afiliada o respaldada por ellos. Los datos se muestran con fines informativos y pueden tener demoras o interrupciones según la disponibilidad de las fuentes. No reemplazan a la información oficial ni a los canales oficiales de emergencia.
+Ahora también ves la altura en una barra contra los niveles de alerta y
+evacuación, cómo viene la última semana, y podés compartir el dato por
+WhatsApp.
 ```
 
 ---
 
-## Orden de screenshots
+## Seguridad de los datos
 
-Los assets listos para subir están en `screenshots/aso/play-ready/`, generados
-por `screenshots/aso/build-play-assets.sh`. Subilos en este orden: Play muestra
-las primeras dos en el resultado de búsqueda, así que ahí va el valor principal.
+Lo que declara el formulario, y por qué:
 
-| # | Archivo | Por qué va ahí |
-|---|---------|----------------|
-| 1 | `01-nivel-y-clima.png` | Nivel + clima + pronóstico en una sola vista. Es la app entera en una imagen. |
-| 2 | `02-tendencia.png` | El detalle de estación, que es la razón por la que alguien busca la app. |
-| 3 | `03-estaciones.png` | Muestra cobertura: son 10 estaciones, no una. |
-| 4 | `04-noticias-106.png` | Noticias y el acceso al 106. |
-| 5 | `05-fuentes.png` | Fuentes de datos y aclaración de independencia. |
+| Dato | Se recolecta | Motivo |
+|---|---|---|
+| Identificador de dispositivo | Sí | Contar dispositivos y qué estaciones se consultan |
+| Token de push | Sí | Entregar la notificación diaria |
+| Ubicación | No se almacena | Se usa en el teléfono para la estación más cercana |
 
-Más `feature-graphic.png` (1024x500), que Play pide para la ficha.
+Ninguno se comparte con terceros. Expo aparece solo como transporte de entrega
+de la notificación, no como destinatario de datos.
 
-El splash queda afuera: no comunica utilidad y ocuparía una de las primeras
-posiciones.
-
-### Por qué no se suben las capturas crudas
-
-Play exige que el lado más largo no supere el doble del más corto. Las capturas
-del simulador son 1206x2622, o sea ratio 2.17, y las viejas de Android 1080x2400,
-ratio 2.22. **Ninguna de las dos se puede subir.** El script las compone sobre un
-lienzo de 1080x1920 (ratio 1.77), que además cumple el mínimo que Play pide para
-ser elegible en ubicaciones destacadas.
-
-### Pendiente en las imágenes
-
-`02-tendencia.png` muestra `Actualizado: 31 de julio` porque el caché del río
-sigue desactualizado para Rosario. Conviene regenerarla cuando el dato esté
-fresco: una ficha con una fecha vieja a la vista sugiere app abandonada.
+La casilla "Otro" en la sección de creación de cuenta queda **sin marcar**: la
+app no tiene cuentas.
 
 ---
 
-## Qué NO poner
+## Antes de tocar la ficha
 
-Motivos del rechazo previo por misleading claims:
-
-- Nada que sugiera app oficial de Prefectura o de un organismo público, ni en
-  texto ni en los visuales.
-- Sin claims promocionales: `#1`, `la mejor`, `gratis`, `sin anuncios`.
-- Sin exagerar precisión o autoridad del dato. Las alturas son información
-  pública reproducida, con demoras posibles.
-- Sin listas de keywords repetidas al final de la descripción.
+Editar la descripción reinicia la revisión. Si hay un binario en revisión y
+lleva varios días, conviene esperar. Si se subió el mismo día, el costo es
+bajo y no vale la pena demorar una corrección.
