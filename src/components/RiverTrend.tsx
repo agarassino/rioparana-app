@@ -70,10 +70,10 @@ export function RiverTrend({ stationId }: Props) {
         </View>
       )}
 
-      <Text style={styles.summary}>{trendSummary(line)}</Text>
+      <Text style={styles.summary}>{trendSummary(points)}</Text>
 
-      {/* The first pass has no width yet: the card is already useful without
-          the curve, so the badge and the sentence do not wait for it. */}
+      {/* The first pass has no measured width. The badge and the sentence are
+          built from the readings, not the geometry, so only the curve waits. */}
       {line && (
       <Svg width={width} height={HEIGHT} style={styles.chart}>
         {/* Filled to the baseline: the shape reads as a water level, where a

@@ -105,12 +105,21 @@ export function sparkPath(points: Reading[], { width, height, padding = 4 }: Box
   };
 }
 
-/** One sentence for a reader who will not decode a curve. */
-export function trendSummary(line: SparkLine | null): string {
-  if (!line) return '';
+/**
+ * One sentence for a reader who will not decode a curve.
+ *
+ * Takes the readings rather than the drawn line: centimetres and days owe
+ * nothing to pixels, and taking the line made the sentence wait for the card
+ * to be measured — so it rendered empty on first paint.
+ */
+export function trendSummary(points: Reading[] | null): string {
+  const pts = [...(points ?? [])].sort((a, b) => a.at - b.at);
+  if (pts.length < 2) return '';
 
-  const cm = Math.round((line.last - line.first) * 100);
-  const days = Math.round((line.to - line.from) / (24 * HOUR));
+  const first = pts[0];
+  const last = pts[pts.length - 1];
+  const cm = Math.round((last.level - first.level) * 100);
+  const days = Math.round((last.at - first.at) / (24 * HOUR));
   const span = days >= 1 ? `${days} ${days === 1 ? 'día' : 'días'}` : 'las últimas horas';
 
   // Prefectura publishes centimetres. Under one is noise in the reading, not a

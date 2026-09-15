@@ -79,9 +79,8 @@ describe('sparkPath', () => {
 });
 
 describe('trendSummary', () => {
-  const box = { width: 300, height: 80, padding: 4 };
   const over = (a: number, b: number, days: number) =>
-    trendSummary(sparkPath(lastDays([daysAgo(days, a), daysAgo(0, b)], CHART_DAYS, NOW), box));
+    trendSummary(lastDays([daysAgo(days, a), daysAgo(0, b)], CHART_DAYS, NOW));
 
   test('says how much the river moved and over how long', () => {
     expect(over(3, 3.12, 3)).toBe('Subió 12 cm en 3 días');
@@ -100,8 +99,15 @@ describe('trendSummary', () => {
     expect(over(3, 3.002, 1)).toBe('Estable en el último día');
   });
 
-  test('says nothing without a line', () => {
+  test('says nothing without enough readings to compare', () => {
     expect(trendSummary(null)).toBe('');
+    expect(trendSummary(lastDays([daysAgo(1, 3)], CHART_DAYS, NOW))).toBe('');
+  });
+
+  test('does not wait for the card to be measured', () => {
+    // It used to take the drawn line, so it rendered empty until onLayout
+    // fired. Centimetres and days owe nothing to pixels.
+    expect(over(3, 3.1, 2)).not.toBe('');
   });
 });
 
