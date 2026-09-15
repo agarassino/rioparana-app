@@ -1,0 +1,14 @@
+# Android's "turn on location services" prompt. It is a system dialog, not the
+# app's, and it comes back on every screen that asks for a position — the home
+# and the station list both do. So this is a subflow, called after each
+# navigation rather than once at launch.
+#
+# Dismissed rather than accepted on purpose: the app has to work for someone who
+# says no, and that is the path worth testing.
+appId: com.syloper.rioparanaapp
+---
+- runFlow:
+    when:
+      visible: "No thanks"
+    commands:
+      - tapOn: "No thanks"

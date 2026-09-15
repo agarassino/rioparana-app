@@ -1,0 +1,83 @@
+# What a user actually does: open the app, pick a station, read the river.
+#
+# The one thing no unit or component test can prove — that the screens are
+# reachable, that navigation wires up, and that live data from the API arrives
+# and is drawn.
+#
+# Two things this flow learned the hard way:
+#
+# 1. Run it against a RELEASE build, never the dev client. The Expo dev-client
+#    launcher shows the app's own name on its home screen, so an assertion as
+#    loose as "Paraná Info" passes while the app has not loaded at all. That
+#    happened, and the flow reported success.
+#
+# 2. Android's "Device location" prompt is a system dialog that appears
+#    whenever a screen asks for a position — and it appears *after* first
+#    paint, so dismissing it once at launch does not work. Each wait below is
+#    wrapped in a retry that dismisses it and looks again.
+appId: com.syloper.rioparanaapp
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+
+# The home screen has settled only once the reading it fetches has landed.
+- retry:
+    maxRetries: 3
+    commands:
+      - runFlow: dismiss-location.yaml
+      - extendedWaitUntil:
+          visible: "Estaciones"
+          timeout: 30000
+      - extendedWaitUntil:
+          visible:
+            text: "[0-9]+\\.[0-9]{2}"
+          timeout: 30000
+
+# Proof we are past any launcher: the dev client has no tab bar of ours.
+- assertNotVisible: "DEVELOPMENT SERVERS"
+
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn: "Estaciones"
+      - runFlow: dismiss-location.yaml
+      # The list runs north to south down the river, so Rosario sits well below
+      # the fold behind the whole Alto Paraná. Scrolling to it is also the only
+      # thing that proves the list is scrollable and complete.
+      - scrollUntilVisible:
+          element: "Rosario"
+          direction: DOWN
+          timeout: 30000
+
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn: "Rosario"
+      - runFlow: dismiss-location.yaml
+      - extendedWaitUntil:
+          visible: "Nivel actual"
+          timeout: 20000
+
+# The reading and its unit.
+- assertVisible:
+    text: "[0-9]+\\.[0-9]{2}"
+- assertVisible: "metros"
+
+# The gauge. Its reference heights are text, so they are assertable, and they
+# appear only when gaugeGeometry returned something — which is the point.
+- extendedWaitUntil:
+    visible:
+      text: "Alerta [0-9]+\\.[0-9]{2}"
+    timeout: 20000
+
+# Sharing has to be reachable. The sheet itself is left alone: the OS chooser is
+# not this app's surface, and tapping it would hang the run.
+- assertVisible: "Compartir"
+
+# Weather comes from a different service, so this proves the second data path
+# end to end as well.
+- extendedWaitUntil:
+    visible: "Clima en Rosario"
+    timeout: 20000
