@@ -87,3 +87,75 @@ describe('startRefreshScheduler', () => {
     expect(refresh).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('daily digest on the scheduler', () => {
+  it('sends once when the window opens and not again that day', async () => {
+    const send = vi.fn(async () => ({ sent: 1, skipped: 0, failed: 0 }));
+    let now = new Date('2026-09-15T10:00:00Z');
+
+    startRefreshScheduler(pool, {
+      intervalMs: INTERVAL,
+      refresh: async () => {},
+      digest: send,
+      now: () => now,
+    });
+
+    await vi.advanceTimersByTimeAsync(INTERVAL);
+    now = new Date('2026-09-15T10:30:00Z');
+    await vi.advanceTimersByTimeAsync(INTERVAL * 3);
+
+    // The scheduler wakes four times here. Without the once-a-day guard every
+    // subscriber gets four notifications.
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it('stays quiet outside the window', async () => {
+    const send = vi.fn(async () => ({ sent: 0, skipped: 0, failed: 0 }));
+
+    startRefreshScheduler(pool, {
+      intervalMs: INTERVAL,
+      refresh: async () => {},
+      digest: send,
+      now: () => new Date('2026-09-15T03:00:00Z'),
+    });
+
+    await vi.advanceTimersByTimeAsync(INTERVAL * 3);
+
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('does not notify from data the refresh could not update', async () => {
+    // A failed refresh means the newest reading is older than this tick
+    // believes, and the digest would head it "today".
+    const send = vi.fn(async () => ({ sent: 0, skipped: 0, failed: 0 }));
+
+    startRefreshScheduler(pool, {
+      intervalMs: INTERVAL,
+      refresh: async () => {
+        throw new Error('origin down');
+      },
+      digest: send,
+      now: () => new Date('2026-09-15T10:00:00Z'),
+    });
+
+    await vi.advanceTimersByTimeAsync(INTERVAL * 2);
+
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('a failing digest does not stop the refresh cycle', async () => {
+    const refresh = vi.fn(async () => {});
+    startRefreshScheduler(pool, {
+      intervalMs: INTERVAL,
+      refresh,
+      digest: async () => {
+        throw new Error('expo down');
+      },
+      now: () => new Date('2026-09-15T10:00:00Z'),
+    });
+
+    await vi.advanceTimersByTimeAsync(INTERVAL * 3);
+
+    expect(refresh.mock.calls.length).toBeGreaterThan(1);
+  });
+});

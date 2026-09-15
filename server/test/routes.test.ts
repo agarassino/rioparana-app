@@ -504,3 +504,63 @@ describe('river history', () => {
     await a.close();
   });
 });
+
+describe('push registration', () => {
+  const DEVICE = '11111111-1111-4111-8111-111111111111';
+  const TOKEN = 'ExponentPushToken[aaaaaaaaaaaaaaaaaaaaaa]';
+
+  const post = async (payload: unknown) => {
+    const a = await app();
+    const res = await a.inject({
+      method: 'POST', url: '/devices/push-token', headers: H, payload: payload as never,
+    });
+    await a.close();
+    return res;
+  };
+
+  it('accepts a token for a device', async () => {
+    expect((await post({ deviceId: DEVICE, pushToken: TOKEN })).statusCode).toBe(204);
+  });
+
+  it('accepts null to turn notifications off', async () => {
+    expect((await post({ deviceId: DEVICE, pushToken: null })).statusCode).toBe(204);
+  });
+
+  it('rejects a body that is not a device and a token', async () => {
+    expect((await post({ deviceId: 'not-a-uuid', pushToken: TOKEN })).statusCode).toBe(400);
+  });
+
+  it('rejects a token that is not an Expo one', async () => {
+    // A stray string here is either a client bug or somebody probing. Either
+    // way it can never be delivered, so it does not belong in the table.
+    expect((await post({ deviceId: DEVICE, pushToken: 'hello' })).statusCode).toBe(400);
+  });
+});
+
+describe('notification history', () => {
+  const DEVICE = '11111111-1111-4111-8111-111111111111';
+
+  it('returns an empty list for a device with nothing sent', async () => {
+    const a = await app();
+    const res = await a.inject({
+      method: 'GET', url: `/notifications?deviceId=${DEVICE}`, headers: H,
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual([]);
+    await a.close();
+  });
+
+  it('needs a device to answer for', async () => {
+    const a = await app();
+    const res = await a.inject({ method: 'GET', url: '/notifications', headers: H });
+    expect(res.statusCode).toBe(400);
+    await a.close();
+  });
+
+  it('stays behind the key, being one device own history', async () => {
+    const a = await app();
+    const res = await a.inject({ method: 'GET', url: `/notifications?deviceId=${DEVICE}` });
+    expect(res.statusCode).toBe(401);
+    await a.close();
+  });
+});

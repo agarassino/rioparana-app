@@ -6,6 +6,7 @@ import { getNews } from '../stores/newsStore.js';
 import { pingDevice } from '../stores/deviceStore.js';
 import { getDeviceStats } from '../stores/deviceStats.js';
 import { getHistory, recordReading } from '../stores/riverHistory.js';
+import { getNotifications, savePushToken } from '../stores/pushStore.js';
 import { getWeather } from '../services/weatherService.js';
 import { validateIngest } from '../services/riverIngest.js';
 import { getStationById } from '../config/stations.js';
@@ -24,6 +25,13 @@ const weatherQuery = z.object({
   lon: z.coerce.number().finite().min(-180).max(180),
 });
 const pingBody = z.object({ deviceId: z.string().uuid(), stationId: z.string().optional() });
+// Expo issues tokens in exactly this shape. Anything else can never be
+// delivered, so it is rejected rather than stored and paid for on every run.
+const pushTokenBody = z.object({
+  deviceId: z.string().uuid(),
+  pushToken: z.string().regex(/^ExponentPushToken\[[^\]]+\]$/).nullable(),
+});
+const notificationsQuery = z.object({ deviceId: z.string().uuid() });
 // Crowd-sourced river level pushed by phones inside Argentina (the only place
 // PNA is reachable). The datacenter cannot scrape PNA itself, so clients ingest.
 const riverIngestBody = z.object({
@@ -126,6 +134,23 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     if (!parsed.success) return reply.code(400).send({ error: 'invalid body' });
     await pingDevice(pool, parsed.data.deviceId, parsed.data.stationId);
     return reply.code(204).send();
+  });
+
+  // Registering, replacing, or clearing a device's push token. Null turns
+  // notifications off, which is the same row with the token gone.
+  app.post('/devices/push-token', async (req, reply) => {
+    const parsed = pushTokenBody.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: 'invalid body' });
+    await savePushToken(pool, parsed.data.deviceId, parsed.data.pushToken);
+    return reply.code(204).send();
+  });
+
+  // One device's own notification history. Behind the key: it is not public
+  // information the way the river heights are.
+  app.get('/notifications', async (req, reply) => {
+    const parsed = notificationsQuery.safeParse(req.query);
+    if (!parsed.success) return reply.code(400).send({ error: 'deviceId required' });
+    return getNotifications(pool, parsed.data.deviceId);
   });
 
   // Usage, not river data: this one stays behind the key.

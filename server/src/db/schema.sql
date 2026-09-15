@@ -50,3 +50,23 @@ CREATE TABLE IF NOT EXISTS water_level_history (
   level      numeric NOT NULL,
   PRIMARY KEY (station_id, timestamp)
 );
+
+-- Push. The token belongs to the device row it already has: one device, one
+-- token, replaced whenever Expo issues a new one.
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS push_token text;
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS push_token_at timestamptz;
+
+-- What was actually sent. The app reads this back rather than keeping its own
+-- copy, so the list survives a reinstall and matches what the server believes
+-- it sent.
+CREATE TABLE IF NOT EXISTS notifications (
+  id         bigserial PRIMARY KEY,
+  device_id  uuid NOT NULL,
+  station_id text NOT NULL,
+  title      text NOT NULL,
+  body       text NOT NULL,
+  sent_at    timestamptz NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS notifications_device_sent
+  ON notifications (device_id, sent_at DESC);
