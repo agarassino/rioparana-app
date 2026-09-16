@@ -28,6 +28,22 @@ causó el rechazo anterior. Sacado en septiembre 2026.
 
 > Si algún día se enciende `FISHING_ENABLED`, este bullet puede volver.
 
+### Rechazo: falta el enlace a la fuente gubernamental — corregido
+Google rechazó la 2.1.0 (16 de septiembre de 2026) por la política de
+afirmaciones engañosas: *"Tu aplicación proporciona información gubernamental,
+pero no incluye una o varias URLs o enlaces claros y accesibles a las fuentes
+originales"*.
+
+La descripción tenía el descargo pero **ninguna URL**. La app sí las tenía, en
+Perfil → Fuentes de datos, pero la política exige que estén también en la
+descripción.
+
+Corregido poniendo el descargo en el primer párrafo y las tres URLs en un
+bloque propio, antes de cualquier texto de venta.
+
+> Lección: una app que muestra datos de un organismo público necesita la fuente
+> enlazada **en la ficha**, no solo dentro de la app.
+
 ### "+10 estaciones" — corregido
 Quedó de cuando el config tenía 10. Desde `37e4027` son 38, y las estadísticas
 de uso muestran que **16 de las 26 estaciones más consultadas no existían** en
@@ -47,20 +63,42 @@ Altura del río Paraná en 38 estaciones, con clima y pronóstico a 7 días.
 
 ## Descripción
 
+> **La corrección del rechazo de septiembre 2026 está en los dos bloques de
+> abajo.** El descargo va arriba de todo, no al final, y cada fuente lleva su
+> URL. Google rechazó la versión anterior por "Falta el enlace a la fuente de
+> información gubernamental": tenía el descargo pero ninguna URL.
+
 ```
+Paraná Info es una aplicación independiente. NO representa, ni está afiliada
+ni autorizada por la Prefectura Naval Argentina ni por ningún otro organismo
+público.
+
+📋 FUENTES OFICIALES DE LOS DATOS
+• Altura del río — Prefectura Naval Argentina:
+  https://contenidosweb.prefecturanaval.gob.ar/alturas
+• Noticias — Portal oficial del Gobierno de Argentina:
+  https://www.argentina.gob.ar/prefecturanaval/noticias-pna
+• Clima — Open-Meteo:
+  https://open-meteo.com
+
+Toda la información de altura del río es información pública publicada por la
+Prefectura Naval Argentina, que la actualiza dos veces por día. Esta
+aplicación la muestra sin modificarla. Las mismas fuentes están enlazadas
+dentro de la app, en la sección Perfil.
+
+—
+
 🌊 ¿A cuánto está el río hoy? Consultá la altura del Paraná en 38 estaciones,
-del Alto Paraná al Delta, con la información pública de Prefectura Naval
-Argentina.
+del Alto Paraná al Delta.
 
 Ideal para pescadores, navegantes y amantes del río.
 
-📍 38 ESTACIONES DE PREFECTURA
-• Del Alto Paraná al Delta: Posadas, Ituzaingó, Corrientes, Goya, La Paz,
-  Santa Fe, Paraná, Diamante, Victoria, Rosario, San Nicolás, Zárate, Tigre
-  y 25 más
+📍 38 ESTACIONES
+• Posadas, Ituzaingó, Corrientes, Goya, La Paz, Santa Fe, Paraná, Diamante,
+  Victoria, Rosario, San Nicolás, Zárate, Tigre y 25 más
 
 📊 CÓMO VIENE EL RÍO
-• La altura contra los niveles de alerta y evacuación
+• La altura contra los niveles de alerta y evacuación que publica Prefectura
 • Los últimos 7 días
 • Cuánto subió o bajó desde ayer
 
@@ -78,12 +116,15 @@ Ideal para pescadores, navegantes y amantes del río.
 🗺️ MAPA
 • Casi 1.000 puntos de pesca y navegación
 
-Los datos de altura son información pública de la Prefectura Naval Argentina.
-Paraná Info es una aplicación independiente y no está afiliada a ningún
-organismo público.
-
-Emergencia náutica: 106
+Emergencia náutica: 106 (Prefectura Naval Argentina)
 ```
+
+### Si hay ficha en inglés
+
+El rechazo citó la descripción **en inglés**. Si existe una ficha en-US cargada
+a mano, necesita la misma corrección: el descargo arriba y las URLs. Una
+traducción automática de Google hereda el texto corregido; una ficha cargada a
+mano, no.
 
 ## Novedades — 2.1.0 (versionCode 13)
 

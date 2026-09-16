@@ -431,7 +431,7 @@ function localityPage(loc) {
   const description =
     `Altura del río Paraná en ${loc.nombre} hoy, según Prefectura Naval Argentina.` +
     (estLoc
-      ? ` Nivel en tiempo real, alerta en ${fmtM(estLoc.alerta)} y evacuación en ${fmtM(estLoc.evacuacion)}.`
+      ? ` Alerta en ${fmtM(estLoc.alerta)} y evacuación en ${fmtM(estLoc.evacuacion)}.`
       : '') +
     (mine.length
       ? ` ${mine.length === 1 ? 'Un servicio náutico y de pesca' : mine.length + ' servicios náuticos y de pesca'} en la zona.`

@@ -9,7 +9,7 @@ export default function ProfileScreen() {
         <FontAwesome6 name="user-circle" size={80} color={COLORS.sand} />
         <Text style={styles.title}>Paraná Info</Text>
         <Text style={styles.subtitle}>
-          Nivel del río en tiempo real, clima, pronóstico y noticias de la Prefectura Naval Argentina.
+          Altura del río, clima, pronóstico y noticias, con información pública de la Prefectura Naval Argentina.
         </Text>
       </View>
 
