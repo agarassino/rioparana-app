@@ -8,7 +8,8 @@ import { Card, Badge } from '../../src/components/ui';
 import { RiverAlert } from '../../src/components/RiverAlert';
 import { RiverGauge } from '../../src/components/RiverGauge';
 import { RiverTrend } from '../../src/components/RiverTrend';
-import { useWaterLevel, useWeather, useDevicePing, useRiverHistory } from '../../src/hooks';
+import { SharePrompt } from '../../src/components/SharePrompt';
+import { useWaterLevel, useWeather, useDevicePing, useRiverHistory, useSharePrompt } from '../../src/hooks';
 import { CHART_DAYS, dayChange, lastDays } from '../../src/services/riverTrend';
 import { shareMessage } from '../../src/services/riverShare';
 import { localitySlugFor } from '../../src/config/localityPages';
@@ -32,6 +33,9 @@ export default function StationDetailScreen() {
   // Read here as well as inside RiverTrend so the shared message can carry what
   // the river did since yesterday. React Query serves both from one request.
   const { data: history } = useRiverHistory(stationId || '');
+  // Counted only once the reading is on screen: the prompt is meant to follow
+  // the app being useful, not merely being opened.
+  const prompt = useSharePrompt(Boolean(waterLevel));
 
   const onShare = async () => {
     if (!station || !waterLevel) return;
@@ -66,6 +70,13 @@ export default function StationDetailScreen() {
   return (
     <>
       <Stack.Screen options={{ title: station.name }} />
+
+      <SharePrompt
+        visible={prompt.visible}
+        context={waterLevel ? { stationName: station.name, level: waterLevel.level } : undefined}
+        onActed={prompt.onActed}
+        onDismiss={prompt.onDismiss}
+      />
 
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         {/* Info de la estacion */}
