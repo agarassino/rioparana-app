@@ -3,6 +3,7 @@ import { newDb } from 'pg-mem';
 import { runMigrations } from '../../src/db/index.js';
 import { pingDevice } from '../../src/stores/deviceStore.js';
 import { getDeviceStats } from '../../src/stores/deviceStats.js';
+import { recordNotification, savePushToken } from '../../src/stores/pushStore.js';
 import type { Pool } from 'pg';
 
 const NOW = new Date('2026-09-06T12:00:00.000Z');
@@ -66,5 +67,62 @@ describe('getDeviceStats', () => {
 
     expect(stats.devices).toBe(1);
     expect(stats.stations).toEqual([]);
+  });
+});
+
+describe('notification reach', () => {
+  const TOKEN = 'ExponentPushToken[aaaaaaaaaaaaaaaaaaaaaa]';
+
+  it('counts nobody as reachable before anyone registers', async () => {
+    await pingDevice(pool, A, 'rosario');
+
+    const stats = await getDeviceStats(pool, NOW);
+    expect(stats.push.subscribers).toBe(0);
+    expect(stats.push.sentLast7Days).toBe(0);
+    expect(stats.push.lastSentAt).toBeNull();
+  });
+
+  it('counts the devices that can actually be reached', async () => {
+    await pingDevice(pool, A, 'rosario');
+    await pingDevice(pool, B, 'goya');
+    await savePushToken(pool, A, TOKEN, NOW);
+
+    expect((await getDeviceStats(pool, NOW)).push.subscribers).toBe(1);
+  });
+
+  it('stops counting a device that turned notifications off', async () => {
+    await savePushToken(pool, A, TOKEN, NOW);
+    await savePushToken(pool, A, null, NOW);
+
+    expect((await getDeviceStats(pool, NOW)).push.subscribers).toBe(0);
+  });
+
+  it('counts what went out this week, and says when the last one did', async () => {
+    await recordNotification(pool, A, 'rosario', 'T', 'B', daysAgo(1));
+    await recordNotification(pool, B, 'goya', 'T', 'B', daysAgo(2));
+
+    const stats = await getDeviceStats(pool, NOW);
+    expect(stats.push.sentLast7Days).toBe(2);
+    expect(stats.push.lastSentAt).toBe(daysAgo(1).toISOString());
+  });
+
+  it('leaves older sends out of the weekly figure', async () => {
+    // The weekly number answers "is this still running", so a send from a
+    // month ago must not make a stopped job look healthy.
+    await recordNotification(pool, A, 'rosario', 'T', 'B', daysAgo(30));
+
+    const stats = await getDeviceStats(pool, NOW);
+    expect(stats.push.sentLast7Days).toBe(0);
+    // But the last one is still reported, because "when did this last work"
+    // is exactly the question being asked when the weekly figure is zero.
+    expect(stats.push.lastSentAt).toBe(daysAgo(30).toISOString());
+  });
+
+  it('counts how many separate devices got one this week', async () => {
+    await recordNotification(pool, A, 'rosario', 'T', 'B', daysAgo(1));
+    await recordNotification(pool, A, 'rosario', 'T', 'B', daysAgo(2));
+    await recordNotification(pool, B, 'goya', 'T', 'B', daysAgo(2));
+
+    expect((await getDeviceStats(pool, NOW)).push.reachedLast7Days).toBe(2);
   });
 });
