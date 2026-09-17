@@ -18,7 +18,13 @@ export default function ProfileScreen() {
   );
 }
 
-const PNA_SOURCE_URL = 'https://contenidosweb.prefecturanaval.gob.ar/alturas';
+// Trailing slash on purpose: without it the host answers 301, and a link
+// checker that does not follow redirects reads that as broken. Play rejected
+// the listing over exactly that.
+const PNA_SOURCE_URL = 'https://contenidosweb.prefecturanaval.gob.ar/alturas/';
+// The national portal, which is reachable from anywhere and links to the page
+// above itself. Listed first so a reader who cannot reach one can reach the other.
+const PNA_PORTAL_URL = 'https://www.argentina.gob.ar/prefecturanaval';
 const WEATHER_SOURCE_URL = 'https://open-meteo.com';
 const NEWS_SOURCE_URL = 'https://www.argentina.gob.ar/prefecturanaval/noticias-pna';
 
@@ -33,8 +39,25 @@ function DataSourcesSection() {
       >
         <FontAwesome6 name="water" size={16} color={COLORS.river} />
         <View style={styles.sourceTextContainer}>
-          <Text style={styles.sourceLabel}>Altura del rio</Text>
+          <Text style={styles.sourceLabel}>Altura del río</Text>
           <Text style={styles.sourceLink}>Prefectura Naval Argentina</Text>
+          <Text style={styles.sourceUrl}>{PNA_SOURCE_URL}</Text>
+        </View>
+        <FontAwesome6 name="arrow-up-right-from-square" size={12} color={COLORS.earthLight} />
+      </Pressable>
+
+      {/* The national portal as well as the data page: it is reachable where
+          the other sometimes is not, and it links to it. Play rejected this
+          listing once for a source link its reviewer could not open. */}
+      <Pressable
+        style={styles.sourceRow}
+        onPress={() => Linking.openURL(PNA_PORTAL_URL)}
+      >
+        <FontAwesome6 name="landmark" size={16} color={COLORS.river} />
+        <View style={styles.sourceTextContainer}>
+          <Text style={styles.sourceLabel}>Portal oficial</Text>
+          <Text style={styles.sourceLink}>Prefectura Naval Argentina</Text>
+          <Text style={styles.sourceUrl}>{PNA_PORTAL_URL}</Text>
         </View>
         <FontAwesome6 name="arrow-up-right-from-square" size={12} color={COLORS.earthLight} />
       </Pressable>
@@ -131,6 +154,12 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.sm,
     color: COLORS.earthLight,
     fontFamily: 'Nunito_400Regular',
+  },
+  sourceUrl: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.earthLight,
+    fontFamily: 'Nunito_400Regular',
+    marginTop: 1,
   },
   sourceLink: {
     fontSize: FONT_SIZES.base,
