@@ -1,0 +1,91 @@
+name: refresh-river
+
+# Mantiene al día la altura del río horneada en landing/rio/<localidad>/index.html
+# (ver scripts/refresh-river-landing.mjs). Sin esto, esas 39 páginas se quedan
+# con el número y sin fecha del último `landing/scripts/build-directory.mjs`
+# que alguien corrió a mano.
+#
+# Por qué corre en Actions y no en un cron de la máquina de alguien: el dato
+# tiene que salir todos los días aunque no haya nadie prendido.
+#
+# Ojo con la rama default: GitHub evalúa los `schedule` mirando el workflow tal
+# como está en la rama default del repo. Durante mucho tiempo ésta fue
+# `gh-pages` (un resto de 2026-02, cuando Pages todavía se servía de ahí), y
+# por eso un cron equivalente del backend nunca disparó: server/README.md
+# todavía linkea a un `.github/workflows/refresh.yml` que se borró por ese
+# motivo, y ese refresco terminó mudándose a server/src/scheduler.ts. La rama
+# default pasó a `main` el 2026-09-18 justamente para que este cron funcione.
+# Si alguien la vuelve a cambiar, este workflow deja de dispararse solo y no
+# avisa: queda únicamente el workflow_dispatch manual.
+
+on:
+  schedule:
+    # 08:00 en Argentina (UTC-3, sin horario de verano) = 11:00 UTC.
+    - cron: '0 11 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: refresh-river
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  # Para poder disparar deploy.yml explícitamente después del push (ver más
+  # abajo por qué hace falta).
+  actions: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Refrescar alturas
+        id: refresh
+        run: node scripts/refresh-river-landing.mjs
+
+      - name: Ver si hay cambios
+        id: changed
+        run: |
+          if git diff --quiet -- landing/rio; then
+            echo "any=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "any=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commitear y pushear
+        if: steps.changed.outputs.any == 'true'
+        run: |
+          count=$(git diff --name-only -- landing/rio | wc -l | tr -d ' ')
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add landing/rio
+          git commit -m "chore(landing): refrescar altura del río ($count páginas)"
+          git push origin main
+
+      # GitHub no dispara otros workflows a partir de un push hecho con el
+      # GITHUB_TOKEN por defecto (es la protección anti-loop de Actions: un
+      # push de un workflow no puede encadenar otro `on: push`). deploy.yml
+      # escucha push a main, así que ese push de arriba no lo va a activar
+      # solo. En vez de agregar un PAT nuevo como secret, se lo dispara acá
+      # explícitamente por workflow_dispatch —deploy.yml ya lo soporta con
+      # target=landing— usando el mismo GITHUB_TOKEN: llamar a la API de
+      # Actions no es un evento "push", así que la protección anti-loop no
+      # aplica y no hace falta ningún secret adicional.
+      - name: Disparar el deploy de la landing
+        if: steps.changed.outputs.any == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --ref main -f target=landing
+
+      - name: Sin cambios
+        if: steps.changed.outputs.any == 'false'
+        run: echo "Ninguna localidad cambió de valor o de fecha. Nada para commitear."
