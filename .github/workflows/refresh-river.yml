@@ -5,23 +5,19 @@ name: refresh-river
 # con el número y sin fecha del último `landing/scripts/build-directory.mjs`
 # que alguien corrió a mano.
 #
-# Por qué corre en Actions y no en un cron de la máquina de alguien: el dato
-# tiene que salir todos los días aunque no haya nadie prendido.
+# El cron NO vive acá: lo dispara launchd desde la Mac del founder
+# (~/Library/LaunchAgents/com.syloper.cartera-refresh.plist →
+# seo-geo-mkt/scripts/refresh-cartera-diario.sh), porque desde GitHub no se
+# puede deployar: Coolify está en una IP de Tailscale (CGNAT) y los secrets
+# del OAuth client no están cargados ni se van a cargar. Un cron acá
+# commitearía datos frescos que producción nunca vería, que es peor que no
+# tener cron: el repo diría una cosa y el sitio otra.
 #
-# Ojo con la rama default: GitHub evalúa los `schedule` mirando el workflow tal
-# como está en la rama default del repo. Durante mucho tiempo ésta fue
-# `gh-pages` (un resto de 2026-02, cuando Pages todavía se servía de ahí), y
-# por eso un cron equivalente del backend nunca disparó: server/README.md
-# todavía linkea a un `.github/workflows/refresh.yml` que se borró por ese
-# motivo, y ese refresco terminó mudándose a server/src/scheduler.ts. La rama
-# default pasó a `main` el 2026-09-18 justamente para que este cron funcione.
-# Si alguien la vuelve a cambiar, este workflow deja de dispararse solo y no
-# avisa: queda únicamente el workflow_dispatch manual.
+# Este workflow queda solo como disparador manual, para poder refrescar desde
+# la web sin la máquina a mano. Ojo: si lo corrés desde acá, commitea pero NO
+# deploya — hay que deployar aparte.
 
 on:
-  schedule:
-    # 08:00 en Argentina (UTC-3, sin horario de verano) = 11:00 UTC.
-    - cron: '0 11 * * *'
   workflow_dispatch:
 
 concurrency:

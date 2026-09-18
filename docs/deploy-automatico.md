@@ -163,3 +163,29 @@ node scripts/refresh-river-landing.mjs --only=rosario
 gh workflow run refresh-river.yml
 gh run watch
 ```
+
+
+## Dónde vive realmente el cron de refresco
+
+`refresh-river.yml` quedó como disparador manual. El cron diario lo corre
+**launchd desde la Mac**, no GitHub:
+
+- `~/Library/LaunchAgents/com.syloper.cartera-refresh.plist` (09:30 y 16:00)
+- → `~/workspace/seo-geo-mkt/scripts/refresh-cartera-diario.sh`
+- Log: `~/Library/Logs/cartera-refresh.log`
+
+El motivo es el mismo que explica todo este archivo, llevado hasta el final: el
+runner de GitHub no llega a Coolify sin un OAuth client de Tailscale, y esos
+secrets no están cargados. Un cron en Actions commitearía datos frescos que
+producción nunca vería — el repo diría una cosa y el sitio otra. Esta máquina ya
+está en la tailnet, así que pushea y deploya en el mismo paso, que es como
+funcionaba el harness anterior.
+
+Hay un segundo motivo, específico de este repo: Prefectura Naval solo responde a
+IPs residenciales argentinas (ver `scripts/push-river.sh`), así que parte del
+pipeline de datos no puede correr en un runner de GitHub ni aunque se resuelva
+lo de Tailscale.
+
+Precedente: `com.syloper.rioparana.push` ya usa este mismo mecanismo desde hace
+tiempo (4 corridas por día, log en `~/Library/Logs/rioparana-push.log`) para
+alimentar la cache de la app. El refresco de la landing sigue esa convención.
