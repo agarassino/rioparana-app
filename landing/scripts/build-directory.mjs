@@ -426,9 +426,26 @@ function localityPage(loc) {
   const mine = byLocality.get(loc.slug) ?? [];
   const { upstream, downstream } = riverNeighbours(loc, published);
 
-  const title = `Altura del río Paraná en ${loc.nombre} hoy — Prefectura Naval | Paraná Info`;
+  // La localidad "Paraná" comparte nombre con el río: el template genérico
+  // ("Altura del río Paraná en Paraná hoy") lee como un typo/duplicado en el
+  // SERP y frena el CTR aunque la posición sea buena (GSC 2026-09-24: pos
+  // ~7.3, CTR 0,16% en "altura rio parana", 633 impr/semana — el patrón se
+  // repite en variantes genéricas como "altura de los rios", "altura del rio
+  // parana", todas aterrizando en esta página). Desambiguar con la provincia
+  // SOLO para esta localidad — el resto de las 38 páginas no tiene el choque
+  // de nombres. `readNombre()` en scripts/refresh-river-landing.mjs sigue
+  // funcionando: captura todo lo que hay entre "en " y " hoy" en el <title>,
+  // así que "Paraná (Entre Ríos)" queda como nombre para los refrescos
+  // diarios (número/fecha/descripción) sin tocar ese script.
+  const esParana = loc.nombre === 'Paraná';
+
+  const title = esParana
+    ? `Altura del río Paraná en Paraná (${loc.provincia}) hoy`
+    : `Altura del río Paraná en ${loc.nombre} hoy — Prefectura Naval | Paraná Info`;
   const lectura = bakedReading(estLoc);
   const description =
+    // Sin "(Entre Ríos)" acá: con la cláusula de servicios pasaría los 160
+    // caracteres. El refresco diario la reescribe desde el <title> igual.
     `Altura del río Paraná en ${loc.nombre} hoy, según Prefectura Naval Argentina.` +
     (estLoc
       ? ` Alerta en ${fmtM(estLoc.alerta)} y evacuación en ${fmtM(estLoc.evacuacion)}.`
@@ -459,7 +476,7 @@ function localityPage(loc) {
 <main class="wrap" style="padding-top:2rem">
   <nav class="crumbs"><a href="/">Inicio</a> › <a href="/rio/">Localidades</a> › ${esc(loc.nombre)}</nav>
 
-  <h1>Altura del río Paraná en ${esc(loc.nombre)}</h1>
+  <h1>Altura del río Paraná en ${esParana ? `Paraná (${esc(loc.provincia)})` : esc(loc.nombre)}</h1>
 
   <section class="river-now">
     <h2>El río hoy</h2>
