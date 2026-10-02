@@ -14,6 +14,7 @@ import {
   riverOrder, tipoLabel, tipos, distanceKm,
 } from './directory.mjs';
 import { gauge, gaugeHtml, marginLabel } from './gauge.mjs';
+import { riverTitle } from './title.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SITE = 'https://rioparana.com.ar';
@@ -434,18 +435,24 @@ function localityPage(loc) {
   // parana", todas aterrizando en esta página). Desambiguar con la provincia
   // SOLO para esta localidad — el resto de las 38 páginas no tiene el choque
   // de nombres. `readNombre()` en scripts/refresh-river-landing.mjs sigue
-  // funcionando: captura todo lo que hay entre "en " y " hoy" en el <title>,
-  // así que "Paraná (Entre Ríos)" queda como nombre para los refrescos
-  // diarios (número/fecha/descripción) sin tocar ese script.
+  // funcionando: lee el nombre del <h1> ("Paraná (Entre Ríos)"), que no cambia
+  // con el título dinámico, para los refrescos diarios.
   const esParana = loc.nombre === 'Paraná';
 
-  const title = esParana
-    ? `Altura del río Paraná en Paraná (${loc.provincia}) hoy`
-    : `Altura del río Paraná en ${loc.nombre} hoy — Prefectura Naval | Paraná Info`;
-  const lectura = bakedReading(estLoc);
+  // Leads with the baked reading when there is one; otherwise the static
+  // wording (with the province for Paraná, see above). The daily patcher
+  // rewrites it with fresh values through the same riverTitle().
+  const title = riverTitle({
+    nombre: esParana ? `Paraná (${loc.provincia})` : loc.nombre,
+    level: byStation.get(estLoc?.estacion)?.level ?? null,
+    alertLevel: estLoc?.alerta ?? null,
+    fallback: esParana
+      ? `Altura del río Paraná en Paraná (${loc.provincia}) hoy`
+      : `Altura del río Paraná en ${loc.nombre} hoy — Prefectura Naval | Paraná Info`,
+  });
   const description =
     // Sin "(Entre Ríos)" acá: con la cláusula de servicios pasaría los 160
-    // caracteres. El refresco diario la reescribe desde el <title> igual.
+    // caracteres. El refresco diario la reescribe (con valor y fecha) igual.
     `Altura del río Paraná en ${loc.nombre} hoy, según Prefectura Naval Argentina.` +
     (estLoc
       ? ` Alerta en ${fmtM(estLoc.alerta)} y evacuación en ${fmtM(estLoc.evacuacion)}.`

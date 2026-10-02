@@ -8,7 +8,7 @@
 // el dato horneado se queda viejo apenas alguien se olvida de correrlo.
 //
 // Este script no reconstruye las páginas: parchea in-place solo los cinco
-// puntos que dependen del nivel del río (número, barra, margen, fuente+fecha,
+// puntos que dependen del nivel del río (número, barra, margen, fuente+fecha, título,
 // meta description), leyendo directo del INA (sin restricción de IP, sin el
 // intermediario). Reusa landing/scripts/gauge.mjs -la misma lógica que ya
 // corre en el navegador y en build-directory.mjs- para que el estado
@@ -23,6 +23,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gauge, marginLabel } from '../landing/scripts/gauge.mjs';
+import { riverTitle } from '../landing/scripts/title.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const LANDING_RIO = join(ROOT, 'landing/rio');
@@ -120,7 +121,8 @@ function readThresholds(html) {
 
 /** Nombre de la localidad tal como ya aparece en la página (misma grafía, sin remapear). */
 function readNombre(html) {
-  const m = html.match(/<title>Altura del río Paraná en ([^<]+?) hoy/);
+  // El <h1> no cambia con el título dinámico (que lleva el valor del día).
+  const m = html.match(/<h1>Altura del río Paraná en ([^<]+?)<\/h1>/);
   return m ? m[1] : null;
 }
 
@@ -169,6 +171,12 @@ function patchSrc(html, nombre, isoDate, fechaProsa) {
     `<p id="river-src" class="stations-note">Medición de la Prefectura Naval Argentina en ` +
       `${nombre}, del <time datetime="${isoDate}">${fechaProsa}</time>.</p>`,
   );
+}
+
+/** <title> con el valor y el umbral de alerta al frente (ver landing/scripts/title.mjs). */
+function patchTitle(html, nombre, g) {
+  const title = riverTitle({ nombre, level: g.level, alertLevel: g.alertLevel });
+  return html.replace(/<title>[^<]*<\/title>/, `<title>${title.replace(/&/g, '&amp;')}</title>`);
 }
 
 /** Meta description con el valor y la fecha al frente, recortando umbrales si no entra. */
@@ -226,6 +234,7 @@ async function refreshOne(slug, info) {
   let out = html;
   out = patchGauge(out, g);
   out = patchSrc(out, nombre, isoDate, fechaProsa);
+  out = patchTitle(out, nombre, g);
   out = patchDescription(out, nombre, g, fechaProsa);
 
   if (out === html) {
