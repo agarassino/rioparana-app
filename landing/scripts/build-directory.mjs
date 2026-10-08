@@ -15,10 +15,10 @@ import {
 } from './directory.mjs';
 import { gauge, gaugeHtml, marginLabel } from './gauge.mjs';
 import { riverTitle } from './title.mjs';
+import { playUrl } from './play-url.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SITE = 'https://rioparana.com.ar';
-const PLAY_URL = 'https://play.google.com/store/apps/details?id=com.syloper.rioparanaapp';
 
 const localidades = JSON.parse(readFileSync(join(ROOT, 'data/localidades.json'), 'utf8'));
 const servicios = JSON.parse(readFileSync(join(ROOT, 'data/servicios.json'), 'utf8'));
@@ -350,7 +350,10 @@ function tipoIcon(tipo) {
 // interstitial is what it penalises, so this is deliberately not a popup.
 // Both numbers are checked against what actually ships: 38 stations served by
 // /public/river, 997 features in parana-map.geojson.
-const APP_BAR = `
+// One referrer per locality page: the campaign is the page's own slug, so an
+// install can be traced back to the exact locality that sent it.
+function appBar(campaign) {
+  return `
 <aside class="app-bar" id="app-bar" hidden>
   <img class="app-bar-icon" src="${stamp('/img/app-icon.png')}" alt="" width="44" height="44">
   <span class="app-bar-copy">
@@ -358,11 +361,12 @@ const APP_BAR = `
     <span>38 estaciones y casi 1.000 puntos de pesca, en el teléfono</span>
   </span>
   <a class="btn btn-primary app-bar-cta" data-cta="install" data-cta-location="app_bar"
-     href="${PLAY_URL}" target="_blank" rel="noopener">Instalar</a>
+     href="${esc(playUrl({ medium: 'app_bar', campaign }))}" target="_blank" rel="noopener">Instalar</a>
   <button type="button" class="app-bar-close" id="app-bar-close" aria-label="Cerrar aviso">
     <span aria-hidden="true">\u00d7</span>
   </button>
 </aside>`;
+}
 
 function appBarScript() {
   return `
@@ -450,6 +454,7 @@ function localityPage(loc) {
       ? `Altura del río Paraná en Paraná (${loc.provincia}) hoy`
       : `Altura del río Paraná en ${loc.nombre} hoy — Prefectura Naval | Paraná Info`,
   });
+  const lectura = bakedReading(estLoc);
   const description =
     // Sin "(Entre Ríos)" acá: con la cláusula de servicios pasaría los 160
     // caracteres. El refresco diario la reescribe (con valor y fecha) igual.
@@ -518,7 +523,7 @@ ${grouped.map(([t, list]) => `
 </main>
 ${riverScript(estLoc ? estLoc.estacion : null, estLoc)}
 ${trendScript(estLoc ? estLoc.estacion : null, estLoc ? estLoc.alerta : null)}
-${APP_BAR}
+${appBar(`rio-${loc.slug}`)}
 ${shareScript(loc.nombre)}
 ${appBarScript()}
 ${FOOT}`;
