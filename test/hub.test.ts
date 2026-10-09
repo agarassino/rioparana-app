@@ -52,36 +52,80 @@ describe('hubAnswer', () => {
     expect(text).toContain('medición de Prefectura del 8 de octubre de 2026');
   });
 
-  it('adds the suben/bajan clause only from readings with a delta', () => {
-    const text = hubAnswer([corrientes, rosario]);
-    // corrientes falls (-3), rosario rises (+5)
-    expect(text).toContain('1 estación sube y 1 estación baja');
+  // A headline-only reference station carrying no delta of its own, so the
+  // coverage/up/down/stable math below is driven entirely by the explicit
+  // station sets each test builds — never by what corrientes/rosario happen
+  // to carry.
+  const headlineOnly = reading({
+    slug: 'corrientes', nombre: 'Corrientes', level: 2.4,
+    measuredAtIso: '2026-10-08', measuredAtProsa: '8 de octubre de 2026',
+  });
+
+  // `n` stations with their own gauge, the first `withDelta` of them carrying
+  // a delta from `deltaCm(i)` and the rest null, so tests can dial coverage
+  // precisely.
+  function stationSet(n, withDelta, deltaCm) {
+    return Array.from({ length: n }, (_, i) =>
+      reading({
+        slug: `st-${i}`, nombre: `St ${i}`, level: 1,
+        deltaCm: i < withDelta ? deltaCm(i) : null,
+      }));
+  }
+
+  it('reports suben/bajan/mantienen once coverage reaches 2/3 of stations', () => {
+    // 10 real stations (plus the headline, which carries no delta of its
+    // own): 5 up (>=2cm), 0 down, 2 within the ±2cm "se mantiene" band, 2
+    // with no reading at all. 7/10 = 70%, over the 2/3 gate.
+    const up = stationSet(5, 5, () => 5);
+    const stable = stationSet(2, 2, () => 1);
+    const noDelta = stationSet(2, 0, () => null);
+    const text = hubAnswer([headlineOnly, ...up, ...stable, ...noDelta]);
+    expect(text).toContain('de 7 estaciones, 5 suben, 0 bajan y 2 se mantienen');
+  });
+
+  it('omits the clause below 2/3 coverage, even with real deltas', () => {
+    // 11 real stations (incl. the headline, which has no delta), 6 with a
+    // delta (6/11 ≈ 55%, under the 2/3 gate).
+    const some = stationSet(6, 6, () => 5);
+    const noDelta = stationSet(4, 0, () => null);
+    const text = hubAnswer([headlineOnly, ...some, ...noDelta]);
+    expect(text).not.toMatch(/suben|bajan|mantien/);
   });
 
   it('never double-counts a borrowed reading as its own station', () => {
+    // 3 real stations with a delta (100% coverage) plus a borrowed reading
+    // that must not inflate the denominator or get counted twice.
     const borrowed = reading({
-      slug: 'san-javier', nombre: 'San Javier', level: 2.4, deltaCm: -3, ownStation: false,
+      slug: 'san-javier', nombre: 'San Javier', level: 2.4, deltaCm: -5, ownStation: false,
     });
-    const text = hubAnswer([corrientes, rosario, borrowed]);
-    expect(text).toContain('1 estación sube y 1 estación baja');
+    const real = stationSet(3, 3, () => 5);
+    const text = hubAnswer([headlineOnly, ...real, borrowed]);
+    expect(text).toContain('de 3 estaciones, 3 suben, 0 bajan y 0 se mantienen');
   });
 
-  it('pluralizes correctly for more than one station each way', () => {
-    const headlineOnly = reading({ slug: 'corrientes', nombre: 'Corrientes', level: 2.4 });
-    const many = Array.from({ length: 22 }, (_, i) =>
-      reading({ slug: `up-${i}`, nombre: `Up ${i}`, level: 1, deltaCm: 1 }));
-    const few = Array.from({ length: 16 }, (_, i) =>
-      reading({ slug: `down-${i}`, nombre: `Down ${i}`, level: 1, deltaCm: -1 }));
-    const text = hubAnswer([headlineOnly, ...many, ...few]);
-    expect(text).toContain('22 estaciones suben y 16 estaciones bajan');
+  it('uses the singular "1 estación sube" form, not "1 suben"', () => {
+    const up = stationSet(1, 1, () => 5);
+    const stable = stationSet(2, 2, () => 1);
+    const text = hubAnswer([headlineOnly, ...up, ...stable]);
+    expect(text).toContain('de 3 estaciones, 1 estación sube, 0 bajan y 2 se mantienen');
   });
 
-  it('omits the suben/bajan clause when no station has a delta', () => {
-    const noDelta = reading({
-      slug: 'corrientes', nombre: 'Corrientes', level: 2.4,
-      measuredAtIso: '2026-10-08', measuredAtProsa: '8 de octubre de 2026',
-    });
-    expect(hubAnswer([noDelta])).not.toMatch(/suben|bajan/);
+  it('uses the singular form for a lone falling or lone stable station too', () => {
+    const down = stationSet(1, 1, () => -5);
+    const stable = stationSet(1, 1, () => 0);
+    const up = stationSet(2, 2, () => 5);
+    const text = hubAnswer([headlineOnly, ...down, ...stable, ...up]);
+    expect(text).toContain('de 4 estaciones, 2 suben, 1 estación baja y 1 estación se mantiene');
+  });
+
+  it('treats a delta under 2cm either way as "se mantiene", not a move', () => {
+    const stable = stationSet(3, 3, (i) => [1, 0, -1][i]);
+    const text = hubAnswer([headlineOnly, ...stable]);
+    expect(text).toContain('de 3 estaciones, 0 suben, 0 bajan y 3 se mantienen');
+  });
+
+  it('omits the clause when no station has a delta', () => {
+    expect(hubAnswer([headlineOnly])).not.toMatch(/suben|bajan|mantien/);
   });
 
   it('omits the whole sentence when no reference station has a reading', () => {

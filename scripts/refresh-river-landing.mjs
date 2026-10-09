@@ -25,7 +25,6 @@ import { fileURLToPath } from 'node:url';
 import { gauge, marginLabel } from '../landing/scripts/gauge.mjs';
 import { riverTitle } from '../landing/scripts/title.mjs';
 import { isoDateAR, prosaDateAR } from '../landing/scripts/date-ar.mjs';
-import { dayChange } from '../landing/scripts/sparkline.mjs';
 // Importing this is safe: build-directory.mjs's own side effects (network,
 // filesystem) sit behind its isEntryPoint guard, same as this file's own
 // main() below — see that guard's comment for why that contract matters here.
@@ -102,15 +101,54 @@ async function fetchObservaciones(serie) {
 /**
  * INA observation rows mapped into sparkline.mjs's point shape, oldest first,
  * with the unusable ones dropped. Shared by the latest-reading lookup below
- * and dayChange() (reused as-is from sparkline.mjs, the exact maths the
- * client already draws the "Cómo viene el río" badge from), so the hub's 24h
- * delta can never disagree with a locality page's own trend badge.
+ * and hubDailyDelta() further down.
  */
 export function toPoints(rows) {
   return (rows ?? [])
     .map((row) => ({ level: Number(row?.valor), timestamp: row?.timestart }))
     .filter((p) => Number.isFinite(p.level) && Number.isFinite(new Date(p.timestamp).getTime()))
     .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+}
+
+const HOUR_MS = 3_600_000;
+// A previous reading has to sit roughly a day before the latest one to call
+// the difference a "daily" variation at all — wide enough that a station
+// publishing a little early or late one day still gets compared, narrow
+// enough that a three-day-old reading never passes as "yesterday".
+const DAILY_MIN_SPAN_H = 18;
+const DAILY_MAX_SPAN_H = 30;
+
+/**
+ * The hub's daily variation for one station: the change between its latest
+ * reading and whichever other reading sits closest to 24h before THAT
+ * reading's OWN timestamp — never "now". Anchoring on the reading itself
+ * (rather than on sparkline.mjs's dayChange(), which anchors on "now" because
+ * it exists to answer "how is the river doing right now" for a page a visitor
+ * just opened) makes the result the same no matter what hour this batch job
+ * happens to run at: a station that only publishes once a day must not show a
+ * different delta — or none at all — depending on whether the job ran at
+ * 09:00 or 21:00. Returns null when no reading in the window exists, same
+ * honesty contract as dayChange().
+ */
+export function hubDailyDelta(points) {
+  const pts = points ?? [];
+  if (pts.length < 2) return null;
+
+  const latest = pts[pts.length - 1];
+  const latestAt = new Date(latest.timestamp).getTime();
+  const target = latestAt - 24 * HOUR_MS;
+
+  let ref = null;
+  for (const p of pts.slice(0, -1)) {
+    const at = new Date(p.timestamp).getTime();
+    if (ref === null || Math.abs(at - target) < Math.abs(ref.at - target)) ref = { ...p, at };
+  }
+  if (!ref) return null;
+
+  const spanH = (latestAt - ref.at) / HOUR_MS;
+  if (spanH < DAILY_MIN_SPAN_H || spanH > DAILY_MAX_SPAN_H) return null;
+
+  return Math.round((latest.level - ref.level) * 100);
 }
 
 /** The level and gauge state already baked into a locality page, or null. */
@@ -278,12 +316,10 @@ async function refreshOne(slug, info) {
   const measuredAt = new Date(latest.timestamp);
   const isoDate = isoDateAR(measuredAt);
   const fechaProsa = prosaDateAR(measuredAt);
-  // The same ~24h-window maths the client draws the "Cómo viene el río" badge
-  // from (see sparkline.mjs): null whenever the readings cannot honestly
-  // confirm a span close to 24h, never a guess dressed up as one.
-  const change = dayChange(points);
+  // Anchored on the reading's own timestamp, not on "now" — see
+  // hubDailyDelta()'s own comment for why that matters for a batch job.
   const reading = {
-    level: g.level, state: g.state, deltaCm: change ? change.cm : null,
+    level: g.level, state: g.state, deltaCm: hubDailyDelta(points),
     measuredAtIso: isoDate, measuredAtProsa: fechaProsa,
   };
 

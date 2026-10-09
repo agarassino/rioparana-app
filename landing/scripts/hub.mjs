@@ -2,16 +2,19 @@
 // sentence, the full station table, the meta description and the FAQ.
 //
 // Pure and synchronous, no FS/network: build-directory.mjs calls this with a
-// build-time snapshot (one reading per station, no reliable 24h delta), and
+// build-time snapshot (one reading per station, no reliable daily delta), and
 // scripts/refresh-river-landing.mjs calls it again after the daily INA fetch
-// (which does have a genuine ~24h delta, see sparkline.mjs's dayChange). Both
-// callers hand it the same StationReading shape:
+// (which does have a genuine delta, see its hubDailyDelta() — anchored on each
+// reading's own timestamp, not on "now", so it is the same regardless of what
+// hour the refresh job runs). Both callers hand it the same StationReading
+// shape:
 //
 //   {
 //     slug, nombre,
 //     level: number|null,         // metres
 //     state: 'normal'|'near-alert'|'alert'|'evacuation'|null,  // gauge.mjs
-//     deltaCm: number|null,       // signed cm change over ~24h, or null
+//     deltaCm: number|null,       // signed cm change vs. ~24h before the
+//                                 // reading's own timestamp, or null
 //     measuredAtIso: string|null,    // YYYY-MM-DD
 //     measuredAtProsa: string|null,  // "8 de octubre de 2026"
 //     ownStation: boolean,        // has its own gauge, vs. a borrowed reading
@@ -62,6 +65,23 @@ function freshestDate(list) {
   return best;
 }
 
+// A delta smaller than this reads as noise, not movement — the river "se
+// mantiene" rather than counting as a rise or a fall either way.
+export const STABLE_THRESHOLD_CM = 2;
+
+// Below this fraction of stations actually carrying a delta (see
+// scripts/refresh-river-landing.mjs's hubDailyDelta(), anchored on each
+// reading's own timestamp rather than on "now" so coverage does not depend on
+// what hour the refresh job happens to run), the suben/bajan/mantienen clause
+// would describe "the river" from a minority of it — omit it entirely rather
+// than imply more coverage than the data supports.
+const DELTA_COVERAGE_THRESHOLD = 2 / 3;
+
+/** "1 estación sube" / "5 suben" — singular keeps the noun, plural drops it. */
+function countClause(n, singularVerb, pluralVerb) {
+  return n === 1 ? `1 estación ${singularVerb}` : `${n} ${pluralVerb}`;
+}
+
 /**
  * The lead sentence at the top of the hub, baked from the same readings the
  * table renders. Returns null when there is nothing honest to say (no
@@ -75,13 +95,19 @@ export function hubAnswer(readings) {
   let text = `Hoy el Paraná marca ${listar(parts)}`;
 
   // Only counts actual stations (not a locality borrowing its neighbour's
-  // reading), so "N estaciones" never double-counts one station's movement.
-  const withDelta = readings.filter((r) => r.ownStation && r.deltaCm !== null);
-  const up = withDelta.filter((r) => r.deltaCm > 0).length;
-  const down = withDelta.filter((r) => r.deltaCm < 0).length;
-  if (up + down > 0) {
-    const stations = (n) => (n === 1 ? '1 estación' : `${n} estaciones`);
-    text += `; ${stations(up)} sube${up === 1 ? '' : 'n'} y ${stations(down)} baja${down === 1 ? '' : 'n'}`;
+  // reading), so these numbers never double-count one station's movement.
+  const stations = readings.filter((r) => r.ownStation);
+  const withDelta = stations.filter((r) => r.deltaCm !== null);
+  if (stations.length > 0 && withDelta.length / stations.length >= DELTA_COVERAGE_THRESHOLD) {
+    const up = withDelta.filter((r) => r.deltaCm >= STABLE_THRESHOLD_CM).length;
+    const down = withDelta.filter((r) => r.deltaCm <= -STABLE_THRESHOLD_CM).length;
+    const stable = withDelta.length - up - down;
+    // The total quoted is the number of stations the clause actually sums
+    // over, not the full roster — so it is never a sentence about stations
+    // that had nothing to report.
+    const total = withDelta.length === 1 ? '1 estación' : `${withDelta.length} estaciones`;
+    text += `; de ${total}, ${countClause(up, 'sube', 'suben')}, ` +
+      `${countClause(down, 'baja', 'bajan')} y ${countClause(stable, 'se mantiene', 'se mantienen')}`;
   }
 
   const freshest = freshestDate(headline);
@@ -108,7 +134,11 @@ export function hubDescription({ count, readings, dateProsa }) {
 
 function deltaCell(deltaCm) {
   if (deltaCm === null || deltaCm === undefined) return '—';
-  if (deltaCm === 0) return '<span class="hub-delta" data-dir="flat">Sin cambios</span>';
+  // Same ±2cm "se mantiene" band hubAnswer() counts by, so the table and the
+  // lead sentence can never disagree about whether a station moved.
+  if (Math.abs(deltaCm) < STABLE_THRESHOLD_CM) {
+    return '<span class="hub-delta" data-dir="flat">Sin cambios</span>';
+  }
   const dir = deltaCm > 0 ? 'up' : 'down';
   const arrow = deltaCm > 0 ? '▲' : '▼';
   return `<span class="hub-delta" data-dir="${dir}">${arrow} ${Math.abs(deltaCm)} cm</span>`;
@@ -138,7 +168,7 @@ export function hubTable(readings) {
   return `<div class="table-wrap"><table class="hub-table">` +
     `<caption>Altura del río Paraná por localidad, del Alto Paraná al Delta</caption>` +
     `<thead><tr><th scope="col">Localidad</th><th scope="col">Altura</th>` +
-    `<th scope="col">Variación 24 h</th><th scope="col">Estado</th><th scope="col">Medición</th></tr></thead>` +
+    `<th scope="col">Variación diaria</th><th scope="col">Estado</th><th scope="col">Medición</th></tr></thead>` +
     `<tbody>${rows}</tbody></table></div>`;
 }
 

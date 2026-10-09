@@ -1,10 +1,52 @@
 import { describe, expect, it } from 'vitest';
 // @ts-expect-error plain .mjs without types
 import {
-  toPoints, readBakedLevel, readBakedDate, fallbackReading, buildOverrides,
+  toPoints, readBakedLevel, readBakedDate, fallbackReading, buildOverrides, hubDailyDelta,
 } from '../scripts/refresh-river-landing.mjs';
 // @ts-expect-error plain .mjs without types
 import { indexPage } from '../landing/scripts/build-directory.mjs';
+
+const HOUR = 3_600_000;
+// `latest` long in the past relative to the real clock — any test that
+// passes only because hubDailyDelta secretly reads Date.now() would fail
+// here, since there is nothing near "now" in these points at all.
+const LATEST_AT = new Date('2020-01-10T00:00:00Z').getTime();
+const point = (hoursBeforeLatest: number, level: number) => ({
+  timestamp: new Date(LATEST_AT - hoursBeforeLatest * HOUR).toISOString(),
+  level,
+});
+
+describe('hubDailyDelta', () => {
+  it('computes the delta regardless of how far "now" is from the readings', () => {
+    const points = [point(24, 2.0), point(0, 2.5)];
+    expect(hubDailyDelta(points)).toBe(50);
+  });
+
+  it('picks the point closest to 24h before the latest reading, not before now', () => {
+    const points = [point(48, 1.0), point(22, 2.2), point(0, 2.5)];
+    // 22h is closer to the 24h target than 48h.
+    expect(hubDailyDelta(points)).toBe(Math.round((2.5 - 2.2) * 100));
+  });
+
+  it('accepts a reference point at the edge of the window (18h and 30h)', () => {
+    expect(hubDailyDelta([point(18, 2.0), point(0, 2.5)])).toBe(50);
+    expect(hubDailyDelta([point(30, 2.0), point(0, 2.5)])).toBe(50);
+  });
+
+  it('returns null when the only candidate sits outside the 18-30h window', () => {
+    expect(hubDailyDelta([point(17, 2.0), point(0, 2.5)])).toBeNull();
+    expect(hubDailyDelta([point(31, 2.0), point(0, 2.5)])).toBeNull();
+  });
+
+  it('returns null with fewer than two points', () => {
+    expect(hubDailyDelta([point(0, 2.5)])).toBeNull();
+    expect(hubDailyDelta([])).toBeNull();
+  });
+
+  it('rounds to the nearest centimetre', () => {
+    expect(hubDailyDelta([point(24, 2.0), point(0, 2.006)])).toBe(1);
+  });
+});
 
 describe('toPoints', () => {
   it('maps INA rows into sparkline points, oldest first', () => {
