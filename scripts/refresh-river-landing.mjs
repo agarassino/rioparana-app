@@ -24,23 +24,22 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gauge, marginLabel } from '../landing/scripts/gauge.mjs';
 import { riverTitle } from '../landing/scripts/title.mjs';
+import { isoDateAR, prosaDateAR } from '../landing/scripts/date-ar.mjs';
+import { dayChange } from '../landing/scripts/sparkline.mjs';
+// Importing this is safe: build-directory.mjs's own side effects (network,
+// filesystem) sit behind its isEntryPoint guard, same as this file's own
+// main() below — see that guard's comment for why that contract matters here.
+import { indexPage } from '../landing/scripts/build-directory.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const LANDING_RIO = join(ROOT, 'landing/rio');
+const HUB_PATH = join(ROOT, 'landing/rio/index.html');
 const ESTACIONES_PATH = join(ROOT, 'scripts/ina-estaciones.json');
 
 const INA_BASE = 'https://alerta.ina.gob.ar/a5/obs/puntual/series';
 const LOOKBACK_DAYS = 7;
 const MAX_CONCURRENCY = 6;
 const FETCH_TIMEOUT_MS = 15_000;
-const TZ = 'America/Argentina/Buenos_Aires';
-
-const isoDateFmt = new Intl.DateTimeFormat('en-CA', {
-  timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit',
-});
-const prosaDateFmt = new Intl.DateTimeFormat('es-AR', {
-  timeZone: TZ, day: 'numeric', month: 'long', year: 'numeric',
-});
 
 const args = process.argv.slice(2);
 const DRY_RUN = args.includes('--dry-run');
@@ -100,16 +99,53 @@ async function fetchObservaciones(serie) {
   return rows;
 }
 
-/** La observación más reciente por timestart, o null si no hay ninguna. */
-function latestObservation(rows) {
-  let best = null;
-  for (const row of rows) {
-    const valor = Number(row?.valor);
-    const at = new Date(row?.timestart ?? NaN).getTime();
-    if (!Number.isFinite(valor) || !Number.isFinite(at)) continue;
-    if (!best || at > best.at) best = { valor, at };
-  }
-  return best;
+/**
+ * INA observation rows mapped into sparkline.mjs's point shape, oldest first,
+ * with the unusable ones dropped. Shared by the latest-reading lookup below
+ * and dayChange() (reused as-is from sparkline.mjs, the exact maths the
+ * client already draws the "Cómo viene el río" badge from), so the hub's 24h
+ * delta can never disagree with a locality page's own trend badge.
+ */
+export function toPoints(rows) {
+  return (rows ?? [])
+    .map((row) => ({ level: Number(row?.valor), timestamp: row?.timestart }))
+    .filter((p) => Number.isFinite(p.level) && Number.isFinite(new Date(p.timestamp).getTime()))
+    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+}
+
+/** The level and gauge state already baked into a locality page, or null. */
+export function readBakedLevel(html) {
+  const m = html.match(
+    /<span id="river-now" class="st-level" data-state="([a-z-]+)">([\d.]+)<span class="unit">/,
+  );
+  return m ? { state: m[1], level: Number(m[2]) } : null;
+}
+
+/** The measurement date already baked into a locality page's source note, or null. */
+export function readBakedDate(html) {
+  const m = html.match(
+    /<p id="river-src" class="stations-note">[\s\S]*?<time datetime="([0-9-]+)">([^<]*)<\/time>/,
+  );
+  return m ? { iso: m[1], prosa: m[2] } : null;
+}
+
+/**
+ * Degrades to whatever a locality page already shows when this run could not
+ * refresh it (INA down, no recent observation, unreadable file): the hub
+ * keeps yesterday's honest number instead of blanking the row to "—", with no
+ * delta attached since this run never confirmed one. Mirrors how refreshOne()
+ * itself degrades — a failed run never erases the page's existing reading.
+ */
+export function fallbackReading(html) {
+  if (!html) return null;
+  const baked = readBakedLevel(html);
+  if (!baked) return null;
+  const date = readBakedDate(html);
+
+  return {
+    level: baked.level, state: baked.state, deltaCm: null,
+    measuredAtIso: date?.iso ?? null, measuredAtProsa: date?.prosa ?? null,
+  };
 }
 
 /** Umbrales de alerta/evacuación embebidos en el script inline de cada página. */
@@ -198,38 +234,58 @@ function patchDescription(html, nombre, g, fechaProsa) {
 async function refreshOne(slug, info) {
   const pagePath = join(LANDING_RIO, slug, 'index.html');
 
+  let html = null;
+  try {
+    html = await readFile(pagePath, 'utf8');
+  } catch (err) {
+    return { slug, status: 'failed', reason: `no se pudo leer ${pagePath}: ${err.message}`, reading: null };
+  }
+
   let rows;
   try {
     rows = await fetchObservaciones(info.serie);
   } catch (err) {
-    return { slug, status: 'failed', reason: `INA: ${err.message}` };
+    return { slug, status: 'failed', reason: `INA: ${err.message}`, reading: fallbackReading(html) };
   }
 
-  const latest = latestObservation(rows);
-  if (!latest) {
-    return { slug, status: 'no-data', reason: `sin observaciones en los últimos ${LOOKBACK_DAYS} días` };
-  }
-
-  let html;
-  try {
-    html = await readFile(pagePath, 'utf8');
-  } catch (err) {
-    return { slug, status: 'failed', reason: `no se pudo leer ${pagePath}: ${err.message}` };
+  const points = toPoints(rows);
+  if (!points.length) {
+    return {
+      slug, status: 'no-data',
+      reason: `sin observaciones en los últimos ${LOOKBACK_DAYS} días`,
+      reading: fallbackReading(html),
+    };
   }
 
   const thresholds = readThresholds(html);
   const nombre = readNombre(html);
   if (!thresholds || !nombre) {
-    return { slug, status: 'failed', reason: 'no se pudieron leer umbrales o nombre desde el HTML' };
+    return {
+      slug, status: 'failed', reason: 'no se pudieron leer umbrales o nombre desde el HTML',
+      reading: fallbackReading(html),
+    };
   }
 
-  const g = gauge({ level: latest.valor, ...thresholds });
+  const latest = points[points.length - 1];
+  const g = gauge({ level: latest.level, ...thresholds });
   if (!g) {
-    return { slug, status: 'failed', reason: 'gauge() devolvió null (umbral de alerta inválido)' };
+    return {
+      slug, status: 'failed', reason: 'gauge() devolvió null (umbral de alerta inválido)',
+      reading: fallbackReading(html),
+    };
   }
 
-  const isoDate = isoDateFmt.format(new Date(latest.at));
-  const fechaProsa = prosaDateFmt.format(new Date(latest.at));
+  const measuredAt = new Date(latest.timestamp);
+  const isoDate = isoDateAR(measuredAt);
+  const fechaProsa = prosaDateAR(measuredAt);
+  // The same ~24h-window maths the client draws the "Cómo viene el río" badge
+  // from (see sparkline.mjs): null whenever the readings cannot honestly
+  // confirm a span close to 24h, never a guess dressed up as one.
+  const change = dayChange(points);
+  const reading = {
+    level: g.level, state: g.state, deltaCm: change ? change.cm : null,
+    measuredAtIso: isoDate, measuredAtProsa: fechaProsa,
+  };
 
   let out = html;
   out = patchGauge(out, g);
@@ -238,11 +294,18 @@ async function refreshOne(slug, info) {
   out = patchDescription(out, nombre, g, fechaProsa);
 
   if (out === html) {
-    return { slug, status: 'unchanged', reason: `${g.level.toFixed(2)} m del ${isoDate}` };
+    return { slug, status: 'unchanged', reason: `${g.level.toFixed(2)} m del ${isoDate}`, reading };
   }
 
   if (!DRY_RUN) await writeFile(pagePath, out);
-  return { slug, status: 'updated', reason: `${g.level.toFixed(2)} m del ${isoDate}` };
+  return { slug, status: 'updated', reason: `${g.level.toFixed(2)} m del ${isoDate}`, reading };
+}
+
+/** The per-station overrides indexPage() needs, from refreshOne()'s results. */
+export function buildOverrides(results) {
+  const overrides = new Map();
+  for (const r of results) if (r.reading) overrides.set(r.slug, r.reading);
+  return overrides;
 }
 
 async function main() {
@@ -279,6 +342,26 @@ async function main() {
     `(de ${entries.length} localidades).`,
   );
 
+  // The hub reuses indexPage() from build-directory.mjs — the same function
+  // the build uses — fed the readings this run just produced, so the hub and
+  // the locality pages it links to can never show different numbers for the
+  // same station. A station this run could not refresh falls back to its own
+  // page's existing reading (see fallbackReading()) rather than going blank.
+  const overrides = buildOverrides(results);
+
+  let hubStatus = 'sin cambios';
+  try {
+    const prevHub = await readFile(HUB_PATH, 'utf8').catch(() => null);
+    const nextHub = indexPage(overrides);
+    if (nextHub !== prevHub) {
+      if (!DRY_RUN) await writeFile(HUB_PATH, nextHub);
+      hubStatus = 'actualizado';
+    }
+  } catch (err) {
+    hubStatus = `falló (${err.message})`;
+  }
+  console.log(`Hub /rio/: ${hubStatus}`);
+
   // Una caída del INA no debe romper el workflow diario: solo se sale con
   // error si NINGUNA localidad pudo procesarse (todo falló, nada dio dato ni
   // se resolvió como "sin cambios").
@@ -286,7 +369,13 @@ async function main() {
   process.exit(allFailed ? 1 : 0);
 }
 
-main().catch((err) => {
-  console.error('Error inesperado:', err);
-  process.exit(1);
-});
+// Side effects (network, filesystem, process.exit) only run when this file is
+// executed directly, never when a test imports it for the pure helpers above
+// — same contract as build-directory.mjs's isEntryPoint guard.
+const isEntryPoint = import.meta.url === `file://${process.argv[1]}`;
+if (isEntryPoint) {
+  main().catch((err) => {
+    console.error('Error inesperado:', err);
+    process.exit(1);
+  });
+}

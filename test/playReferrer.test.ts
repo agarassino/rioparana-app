@@ -19,7 +19,11 @@ function localityPages(): Array<{ path: string; campaign: string }> {
     .map((e) => ({ path: `rio/${e.name}/index.html`, campaign: `rio-${e.name}` }));
 }
 
-const pages = [{ path: 'index.html', campaign: 'home' }, ...localityPages()];
+const pages = [
+  { path: 'index.html', campaign: 'home' },
+  { path: 'rio/index.html', campaign: 'rio' },
+  ...localityPages(),
+];
 
 describe('every Play Store link on the published landing', () => {
   for (const { path, campaign } of pages) {
