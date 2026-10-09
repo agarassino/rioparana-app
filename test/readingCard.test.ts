@@ -31,7 +31,7 @@ function locality(slug: string): Locality {
 // The app was previously rejected by Google Play for claiming threshold/alert
 // notifications it does not send. It only ever sends one push a day, at 07:00,
 // for the station a device opens most — never "avisamos cuando suba/baje".
-// `alerta` legitimately appears in "cuánto falta para la alerta" (a distance,
+// `alerta` legitimately appears in "cómo está frente al nivel de alerta" (a state,
 // not a promise to notify), so the guard only matches wording that promises a
 // notification tied to a threshold.
 const ALERT_PROMISE = /avis(a|o|ame)|alerta cuando|cuando (suba|baje)/i;
@@ -58,8 +58,8 @@ describe('reading card on a locality page', () => {
 
   test('body states the real, truthful behaviour (not a threshold alert)', () => {
     expect(html).toContain(
-      'Gratis en la app Paraná Info para Android: cuánto subió o bajó desde ayer y cuánto falta ' +
-        'para la alerta. Te llega la de la localidad que más consultás.',
+      'Gratis en la app Paraná Info para Android: cuánto subió o bajó desde ayer y cómo está ' +
+        'frente al nivel de alerta. Te llega la de la localidad que más consultás.',
     );
   });
 

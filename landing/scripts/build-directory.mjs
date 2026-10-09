@@ -478,7 +478,7 @@ function readingCard(nombreEstacion, campaign) {
   return `
     <div class="reading-card">
       <p class="reading-card-head"><strong>Recibí la altura del río en ${esc(nombreEstacion)} cada mañana a las 7.</strong></p>
-      <p class="reading-card-body">Gratis en la app Paraná Info para Android: cuánto subió o bajó desde ayer y cuánto falta para la alerta. Te llega la de la localidad que más consultás.</p>
+      <p class="reading-card-body">Gratis en la app Paraná Info para Android: cuánto subió o bajó desde ayer y cómo está frente al nivel de alerta. Te llega la de la localidad que más consultás.</p>
       <a class="btn btn-primary reading-card-cta" data-cta="install" data-cta-location="reading_card"
          href="${esc(playUrl({ medium: 'reading_card', campaign }))}" target="_blank" rel="noopener">Instalar en Google Play</a>
     </div>`;
