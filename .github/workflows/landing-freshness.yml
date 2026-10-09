@@ -42,25 +42,36 @@ jobs:
             if [ -n "$d" ] && [[ "$d" > "$newest" ]]; then newest=$d; fi
           done
 
-          # The hub (/rio/) bakes one <time> per station row in its table
-          # rather than a single "del <time>" sentence, so the newest row —
-          # not the first match — is the one worth comparing here.
-          hub=$(curl -fsS --max-time 20 "$HUB_URL" \
-            | grep -oE '<time datetime="[0-9]{4}-[0-9]{2}-[0-9]{2}"' \
-            | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | sort | tail -1 || true)
-          echo "rio (hub): ${hub:-no date found}"
-          if [ -n "$hub" ] && [[ "$hub" > "$newest" ]]; then newest=$hub; fi
-
           if [ -z "$newest" ]; then
-            echo "::error::No reading date found on any page. Did the markup change?"
+            echo "::error::No reading date found on any locality page. Did the markup change?"
             exit 1
           fi
 
           today=$(TZ=America/Argentina/Buenos_Aires date +%F)
-          age=$(( ( $(date -ud "$today" +%s) - $(date -ud "$newest" +%s) ) / 86400 ))
-          echo "Newest reading: $newest ($age days old, limit $MAX_AGE_DAYS)"
+          days_old() { echo $(( ( $(date -ud "$today" +%s) - $(date -ud "$1" +%s) ) / 86400 )); }
 
+          age=$(days_old "$newest")
+          echo "Newest locality reading: $newest ($age days old, limit $MAX_AGE_DAYS)"
           if [ "$age" -gt "$MAX_AGE_DAYS" ]; then
             echo "::error::Baked river readings are $age days old. Check the launchd job com.syloper.cartera-refresh and ~/Library/Logs/cartera-refresh.log on the Mac."
+            exit 1
+          fi
+
+          # The hub is checked on its own, not folded into the newest date
+          # above: the refresh regenerates it in a separate step whose failure
+          # does not fail the run, so fresh locality pages could otherwise
+          # hide a hub frozen on an old date. It bakes one <time> per station
+          # row, so the newest row is the one that counts.
+          hub=$(curl -fsS --max-time 20 "$HUB_URL" \
+            | grep -oE '<time datetime="[0-9]{4}-[0-9]{2}-[0-9]{2}"' \
+            | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | sort | tail -1 || true)
+          if [ -z "$hub" ]; then
+            echo "::error::No reading date found on the /rio/ hub. Did the markup change?"
+            exit 1
+          fi
+          hub_age=$(days_old "$hub")
+          echo "Hub /rio/ newest row: $hub ($hub_age days old, limit $MAX_AGE_DAYS)"
+          if [ "$hub_age" -gt "$MAX_AGE_DAYS" ]; then
+            echo "::error::The /rio/ hub is $hub_age days old while locality pages are fresh. The hub step of scripts/refresh-river-landing.mjs is failing; see ~/Library/Logs/cartera-refresh.log on the Mac."
             exit 1
           fi
