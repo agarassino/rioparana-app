@@ -12,7 +12,8 @@
     "test:logic": "vitest run",
     "test:components": "jest",
     "verify": "npm run typecheck && npm test",
-    "e2e": "maestro --platform android test .maestro/river-detail.yaml"
+    "e2e": "maestro --platform android test .maestro/river-detail.yaml",
+    "landing:regen": "node landing/scripts/build-directory.mjs && node scripts/refresh-river-landing.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/nunito": "^0.4.2",

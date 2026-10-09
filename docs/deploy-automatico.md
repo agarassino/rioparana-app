@@ -131,6 +131,14 @@ margen sean exactamente los que el sitio ya calcula en el navegador y en el
 build. No toca nombres, umbrales, servicios ni la navegación entre localidades:
 eso sigue siendo trabajo de `build-directory.mjs`.
 
+Por eso un regen completo es `npm run landing:regen` (build + refresh en ese
+orden), nunca `build-directory.mjs` solo: la lectura que hornea el build viene
+de `api.rioparana.com.ar`, que puede estar vieja o vacía si nadie corrió
+`push-river.sh`, y encadenar el refresh evita que un regen pise el valor fresco
+que el cron diario ya había parcheado. `refresh-river-landing.mjs` es
+idempotente (no escribe nada si no hay lectura nueva), así que correrlo de
+nuevo sin datos frescos no ensucia el working tree.
+
 El workflow [`refresh-river.yml`](../.github/workflows/refresh-river.yml) lo
 corre una vez por día (11:00 UTC = 08:00 ART) y, si hubo cambios, commitea y
 pushea a `main`.

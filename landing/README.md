@@ -32,8 +32,20 @@ Las páginas bajo `/rio/`, los índices por tipo de servicio y el `sitemap.xml` 
 generan. No se editan a mano.
 
 ```bash
-node scripts/build-directory.mjs
+npm run landing:regen
 ```
+
+That runs `landing/scripts/build-directory.mjs` (rebuild every page from the
+data files) and then `scripts/refresh-river-landing.mjs` (patch in the
+authoritative INA reading) in sequence. Run them in that order, not
+`build-directory.mjs` alone: the build's own baked reading comes from
+`api.rioparana.com.ar`, a backend that only gets fresh data when someone runs
+`scripts/push-river.sh` from an Argentine IP, so right after a regen it can be
+stale or empty ("—"). `refresh-river-landing.mjs` reads directly from the INA
+(no IP restriction) and is idempotent — re-running it with no new reading
+touches nothing — so chaining it after the build is what keeps a regen from
+regressing the number a reader sees. See `docs/deploy-automatico.md` for why
+the two sources exist separately in the first place.
 
 Fuente de verdad: `data/localidades.json` y `data/servicios.json`. Para agregar
 un lodge o una escuela, se agrega una línea a `servicios.json` —y la localidad a

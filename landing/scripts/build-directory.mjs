@@ -26,16 +26,28 @@ const servicios = JSON.parse(readFileSync(join(ROOT, 'data/servicios.json'), 'ut
 // Bake the current river level into the served HTML so crawlers (and readers
 // before JS runs) see a real number instead of the "—" placeholder. The client
 // still refreshes it live afterwards. Offline / API down degrades to "—".
+//
+// This is a best-effort snapshot, not the authoritative reading: that backend
+// depends on someone running scripts/push-river.sh from an Argentine IP (see
+// docs/deploy-automatico.md), so it can be stale or empty at regen time. The
+// daily scripts/refresh-river-landing.mjs patches in the real, current reading
+// straight from the INA afterwards — see `npm run landing:regen`, which runs
+// both in sequence so a regen never ships a number older than the last
+// refresh. Kept behind loadByStation() (not a top-level await) so importing
+// this module for its render functions never makes a network call.
 const byStation = new Map();
-try {
-  const res = await fetch('https://api.rioparana.com.ar/public/river', {
-    headers: { Accept: 'application/json' },
-  });
-  if (res.ok) {
-    for (const r of await res.json()) byStation.set(r.stationId, r);
+
+async function loadByStation() {
+  try {
+    const res = await fetch('https://api.rioparana.com.ar/public/river', {
+      headers: { Accept: 'application/json' },
+    });
+    if (res.ok) {
+      for (const r of await res.json()) byStation.set(r.stationId, r);
+    }
+  } catch {
+    // no-op: pages keep the placeholder and paint client-side
   }
-} catch {
-  // no-op: pages keep the placeholder and paint client-side
 }
 
 const fmtM = (v) => `${Number(v)} m`;
@@ -124,12 +136,29 @@ ${jsonld.map((b) => `<script type="application/ld+json">${JSON.stringify(b)}</sc
 </div></header>`;
 }
 
-const FOOT = `
+// Cross-site footer linking the rest of the portfolio (commit 21eb11b). It was
+// pasted by hand into every already-generated page instead of landing here, so
+// a regen used to silently drop it. One copy, shared by every page the
+// generator emits (locality, hub, service-type).
+const NETWORK_FOOTER = `<nav class="shell footer-base" aria-label="Sitios de la red" style="display:flex;flex-wrap:wrap;gap:.2rem 1rem;font-size:.78rem;">
+<a href="https://cobranzaspymes.com.ar/" rel="noopener">Cobranzas PyME</a>
+<a href="https://centrosdesalud.com.ar/" rel="noopener">Centros de Salud</a>
+<a href="https://mismultas.com.ar/" rel="noopener">Multas de tránsito</a>
+<a href="https://termotanque.com.ar/" rel="noopener">Termotanques</a>
+<a href="https://purificadoragua.com.ar/" rel="noopener">Purificadores de agua</a>
+<a href="https://vitaminasysuplementos.com.ar/" rel="noopener">Suplementos</a>
+<a href="https://comprarenelexterior.com.ar/" rel="noopener">Comprar en el exterior</a>
+<a href="https://guiademascotas.com.ar/" rel="noopener">Mascotas</a>
+<a href="https://preciogranos.com.ar/" rel="noopener">Precio de granos</a>
+</nav>`;
+
+export const FOOT = `
 <footer class="wrap" style="padding:2rem 0">
   <p><a href="/">Volver a Paraná Info</a></p>
   <p class="disclaimer">Alturas: información pública de la Prefectura Naval Argentina.
   Paraná Info es una aplicación independiente y no está afiliada a ningún organismo público.
   Los servicios listados enlazan a su contacto público; no republicamos sus datos.</p>
+${NETWORK_FOOTER}
 </footer>
 </body>
 </html>`;
@@ -425,7 +454,7 @@ const SHARE_BUTTONS = `
       </button>
     </p>`;
 
-function localityPage(loc) {
+export function localityPage(loc) {
   const estLoc = nearestStationLocality(loc, localidades);
   const prestada = estLoc && estLoc.slug !== loc.slug;
   const mine = byLocality.get(loc.slug) ?? [];
@@ -529,7 +558,7 @@ ${appBarScript()}
 ${FOOT}`;
 }
 
-function indexPage() {
+export function indexPage() {
   const jsonld = [{ '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
     { '@type': 'ListItem', position: 1, name: 'Paraná Info', item: SITE },
     { '@type': 'ListItem', position: 2, name: 'Altura del río Paraná', item: `${SITE}/rio/` },
@@ -555,7 +584,7 @@ function indexPage() {
 ${FOOT}`;
 }
 
-function typePage(tipo) {
+export function typePage(tipo) {
   const list = servicios.filter((s) => s.tipo === tipo);
   if (!list.length) return null;
 
@@ -588,67 +617,81 @@ function write(path, html) {
   writeFileSync(full, html);
 }
 
-// Regenerate from scratch so a locality removed from the data disappears.
-for (const dir of ['rio', 'servicios']) {
-  if (existsSync(join(ROOT, dir))) rmSync(join(ROOT, dir), { recursive: true });
+// Everything below has side effects (network, filesystem) and only runs when
+// this file is executed directly (`node landing/scripts/build-directory.mjs`),
+// never when it is imported — e.g. by a test pulling in localityPage/indexPage/
+// typePage to check the markup they render. Importing this module must never
+// delete landing/rio or landing/servicios, nor touch the network.
+async function main() {
+  await loadByStation();
+
+  // Regenerate from scratch so a locality removed from the data disappears.
+  for (const dir of ['rio', 'servicios']) {
+    if (existsSync(join(ROOT, dir))) rmSync(join(ROOT, dir), { recursive: true });
+  }
+
+  const urls = [`${SITE}/`, `${SITE}/rio/`];
+  write('rio/index.html', indexPage());
+
+  for (const loc of published) {
+    write(`rio/${loc.slug}/index.html`, localityPage(loc));
+    urls.push(`${SITE}/rio/${loc.slug}/`);
+  }
+
+  for (const t of tipos()) {
+    const html = typePage(t);
+    if (!html) continue;
+    write(`servicios/${t}/index.html`, html);
+    urls.push(`${SITE}/servicios/${t}/`);
+  }
+
+  for (const g of ['fansfishing', 'careca-pesca', 'la-paz']) urls.push(`${SITE}/guias/${g}.html`);
+
+  writeFileSync(join(ROOT, 'sitemap.xml'),
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+    urls.map((u) => `  <url><loc>${u}</loc></url>`).join('\n') +
+    `\n</urlset>\n`);
+
+  // The home page is hand-maintained, but its station list has to stay in step
+  // with the directory: those are the links that let a crawler reach every
+  // locality page from the one page it already knows.
+  const homePath = join(ROOT, 'index.html');
+  let home = readFileSync(homePath, 'utf8');
+
+  // Stamp each screenshot URL with a hash of its bytes. Replacing an image
+  // without changing its URL leaves returning visitors on the old one for as
+  // long as the cache lasts, which is how the stretched mockups survived a
+  // deploy that had already fixed them.
+  // Stylesheets need the same treatment: a CSS fix nobody sees because the old
+  // file is still cached is indistinguishable from a fix that did not work.
+  home = home.replace(/(\/(?:site|tokens)\.css|\/analytics\.js)(\?v=[a-f0-9]+)?/g, (_m, file) => {
+    const bytes = readFileSync(join(ROOT, file));
+    return `${file}?v=${createHash('sha256').update(bytes).digest('hex').slice(0, 8)}`;
+  });
+
+  home = home.replace(/(\/img\/[a-z0-9-]+\.(?:png|webp))(\?v=[a-f0-9]+)?/g, (_m, file) => {
+    const bytes = readFileSync(join(ROOT, file));
+    return `${file}?v=${createHash('sha256').update(bytes).digest('hex').slice(0, 8)}`;
+  });
+  const items = published
+    .filter((l) => l.estacion)
+    .map((l) =>
+      `<li data-station="${l.estacion}"><a class="st-name" href="/rio/${l.slug}/">${esc(l.nombre)}</a>` +
+      `<span class="st-level" data-fallback="—">—</span></li>`)
+    .join('');
+  const listPattern = /<ul id="station-list">[\s\S]*?<\/ul>/;
+  if (!listPattern.test(home)) {
+    // Comparing the result would report a false miss whenever the list is
+    // already up to date, which is the common case.
+    console.warn('AVISO: no se encontró #station-list en index.html');
+  } else {
+    writeFileSync(homePath, home.replace(listPattern, `<ul id="station-list">${items}</ul>`));
+  }
+
+  console.log(`${published.length} localidades, ${servicios.length} servicios, ${urls.length} URLs en el sitemap`);
 }
 
-const urls = [`${SITE}/`, `${SITE}/rio/`];
-write('rio/index.html', indexPage());
-
-for (const loc of published) {
-  write(`rio/${loc.slug}/index.html`, localityPage(loc));
-  urls.push(`${SITE}/rio/${loc.slug}/`);
+const isEntryPoint = import.meta.url === `file://${process.argv[1]}`;
+if (isEntryPoint) {
+  await main();
 }
-
-for (const t of tipos()) {
-  const html = typePage(t);
-  if (!html) continue;
-  write(`servicios/${t}/index.html`, html);
-  urls.push(`${SITE}/servicios/${t}/`);
-}
-
-for (const g of ['fansfishing', 'careca-pesca', 'la-paz']) urls.push(`${SITE}/guias/${g}.html`);
-
-writeFileSync(join(ROOT, 'sitemap.xml'),
-  `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
-  urls.map((u) => `  <url><loc>${u}</loc></url>`).join('\n') +
-  `\n</urlset>\n`);
-
-// The home page is hand-maintained, but its station list has to stay in step
-// with the directory: those are the links that let a crawler reach every
-// locality page from the one page it already knows.
-const homePath = join(ROOT, 'index.html');
-let home = readFileSync(homePath, 'utf8');
-
-// Stamp each screenshot URL with a hash of its bytes. Replacing an image
-// without changing its URL leaves returning visitors on the old one for as
-// long as the cache lasts, which is how the stretched mockups survived a
-// deploy that had already fixed them.
-// Stylesheets need the same treatment: a CSS fix nobody sees because the old
-// file is still cached is indistinguishable from a fix that did not work.
-home = home.replace(/(\/(?:site|tokens)\.css|\/analytics\.js)(\?v=[a-f0-9]+)?/g, (_m, file) => {
-  const bytes = readFileSync(join(ROOT, file));
-  return `${file}?v=${createHash('sha256').update(bytes).digest('hex').slice(0, 8)}`;
-});
-
-home = home.replace(/(\/img\/[a-z0-9-]+\.(?:png|webp))(\?v=[a-f0-9]+)?/g, (_m, file) => {
-  const bytes = readFileSync(join(ROOT, file));
-  return `${file}?v=${createHash('sha256').update(bytes).digest('hex').slice(0, 8)}`;
-});
-const items = published
-  .filter((l) => l.estacion)
-  .map((l) =>
-    `<li data-station="${l.estacion}"><a class="st-name" href="/rio/${l.slug}/">${esc(l.nombre)}</a>` +
-    `<span class="st-level" data-fallback="—">—</span></li>`)
-  .join('');
-const listPattern = /<ul id="station-list">[\s\S]*?<\/ul>/;
-if (!listPattern.test(home)) {
-  // Comparing the result would report a false miss whenever the list is
-  // already up to date, which is the common case.
-  console.warn('AVISO: no se encontró #station-list en index.html');
-} else {
-  writeFileSync(homePath, home.replace(listPattern, `<ul id="station-list">${items}</ul>`));
-}
-
-console.log(`${published.length} localidades, ${servicios.length} servicios, ${urls.length} URLs en el sitemap`);
