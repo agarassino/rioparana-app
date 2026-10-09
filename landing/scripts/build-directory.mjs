@@ -462,6 +462,28 @@ const SHARE_BUTTONS = `
       </button>
     </p>`;
 
+// Sits right after the reading/gauge/margin/source block, the one moment the
+// reader has just confirmed the exact number they came for — before the "ver
+// todo el río" link and the share buttons, which are secondary next steps.
+// `nombreEstacion` is the station that actually produced the reading above:
+// the page's own locality when it has a gauge, otherwise the borrowed
+// neighbour's — never the borrowing locality's own name, which has no
+// reading to promise a notification for.
+//
+// Copy must stay inside what the app actually does (Play rejected it once for
+// claiming threshold alerts): one push a day at 07:00 for the station a
+// device opens most, with the change since yesterday and the distance to
+// alert — never "we'll notify you when it rises/reaches alert".
+function readingCard(nombreEstacion, campaign) {
+  return `
+    <div class="reading-card">
+      <p class="reading-card-head"><strong>Recibí la altura del río en ${esc(nombreEstacion)} cada mañana a las 7.</strong></p>
+      <p class="reading-card-body">Gratis en la app Paraná Info para Android: cuánto subió o bajó desde ayer y cuánto falta para la alerta. Te llega la de la localidad que más consultás.</p>
+      <a class="btn btn-primary reading-card-cta" data-cta="install" data-cta-location="reading_card"
+         href="${esc(playUrl({ medium: 'reading_card', campaign }))}" target="_blank" rel="noopener">Instalar en Google Play</a>
+    </div>`;
+}
+
 export function localityPage(loc) {
   const estLoc = nearestStationLocality(loc, localidades);
   const prestada = estLoc && estLoc.slug !== loc.slug;
@@ -541,6 +563,7 @@ ${esParana ? `  <p class="hub-callout"><a href="/rio/">¿Buscás la altura en to
         ? `Lectura de la estación ${esc(estLoc.nombre)}, a ${Math.round(distanceKm(loc, estLoc))} km. ${esc(loc.nombre)} no tiene hidrómetro propio.`
         : `Medición de la Prefectura Naval Argentina en ${esc(loc.nombre)}.`
     }</p>
+${readingCard(prestada ? estLoc.nombre : loc.nombre, `rio-${loc.slug}`)}
     <p class="stations-note"><a href="/rio/">Ver la altura en todo el río →</a></p>${SHARE_BUTTONS}
   </section>
 ${TREND_SECTION}
