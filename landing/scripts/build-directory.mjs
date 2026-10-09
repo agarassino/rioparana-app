@@ -14,8 +14,10 @@ import {
   riverOrder, tipoLabel, tipos, distanceKm,
 } from './directory.mjs';
 import { gauge, gaugeHtml, marginLabel } from './gauge.mjs';
-import { riverTitle } from './title.mjs';
+import { riverTitle, hubTitle } from './title.mjs';
 import { playUrl } from './play-url.mjs';
+import { isoDateAR, prosaDateAR } from './date-ar.mjs';
+import { hubAnswer, hubDescription, hubFaqHtml, hubFaqJsonLd, hubTable } from './hub.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SITE = 'https://rioparana.com.ar';
@@ -501,7 +503,7 @@ export function localityPage(loc) {
       geo: { '@type': 'GeoCoordinates', latitude: loc.lat, longitude: loc.lon } },
     { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Paraná Info', item: SITE },
-      { '@type': 'ListItem', position: 2, name: 'Localidades', item: `${SITE}/rio/` },
+      { '@type': 'ListItem', position: 2, name: 'Altura del río Paraná hoy', item: `${SITE}/rio/` },
       { '@type': 'ListItem', position: 3, name: loc.nombre, item: `${SITE}/rio/${loc.slug}/` },
     ] },
     ...mine.map((s) => ({ '@context': 'https://schema.org', '@type': 'LocalBusiness',
@@ -515,9 +517,11 @@ export function localityPage(loc) {
 
   return head({ title, description, canonical: `${SITE}/rio/${loc.slug}/`, jsonld }) + `
 <main class="wrap" style="padding-top:2rem">
-  <nav class="crumbs"><a href="/">Inicio</a> › <a href="/rio/">Localidades</a> › ${esc(loc.nombre)}</nav>
+  <nav class="crumbs"><a href="/">Inicio</a> › <a href="/rio/">Altura del río Paraná hoy</a> › ${esc(loc.nombre)}</nav>
 
   <h1>Altura del río Paraná en ${esParana ? `Paraná (${esc(loc.provincia)})` : esc(loc.nombre)}</h1>
+${esParana ? `
+  <p class="hub-callout"><a href="/rio/">¿Buscás la altura en todo el río Paraná? Ver las ${published.length} estaciones →</a></p>` : ''}
 
   <section class="river-now">
     <h2>El río hoy</h2>
@@ -532,7 +536,8 @@ export function localityPage(loc) {
       prestada
         ? `Lectura de la estación ${esc(estLoc.nombre)}, a ${Math.round(distanceKm(loc, estLoc))} km. ${esc(loc.nombre)} no tiene hidrómetro propio.`
         : `Medición de la Prefectura Naval Argentina en ${esc(loc.nombre)}.`
-    }</p>${SHARE_BUTTONS}
+    }</p>
+    <p class="stations-note"><a href="/rio/">Ver la altura en todo el río →</a></p>${SHARE_BUTTONS}
   </section>
 ${TREND_SECTION}
 
@@ -558,29 +563,104 @@ ${appBarScript()}
 ${FOOT}`;
 }
 
-export function indexPage() {
-  const jsonld = [{ '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
-    { '@type': 'ListItem', position: 1, name: 'Paraná Info', item: SITE },
-    { '@type': 'ListItem', position: 2, name: 'Altura del río Paraná', item: `${SITE}/rio/` },
-  ] }];
+// Resolves one StationReading (see hub.mjs) per published locality. `overrides`
+// is keyed by the STATION-OWNING locality's own slug (ina-estaciones.json's
+// keys already match landing/data/localidades.json slugs, see
+// scripts/refresh-river-landing.mjs), the same slug nearestStationLocality()
+// resolves a borrowing locality to — so a borrowing locality picks up its
+// neighbour's fresh reading through the exact lookup its own page already
+// uses, with no separate resolution logic for the refresh script to duplicate.
+function hubReadings(overrides) {
+  return published.map((loc) => {
+    const estLoc = nearestStationLocality(loc, localidades);
+    const over = estLoc ? overrides.get(estLoc.slug) : undefined;
+    const ownStation = Boolean(loc.estacion);
+
+    if (over) {
+      return {
+        slug: loc.slug, nombre: loc.nombre, ownStation,
+        level: over.level ?? null,
+        state: over.state ?? null,
+        deltaCm: over.deltaCm ?? null,
+        measuredAtIso: over.measuredAtIso ?? null,
+        measuredAtProsa: over.measuredAtProsa ?? null,
+      };
+    }
+
+    // No fresher override: fall back to the build-time snapshot. It has no
+    // verified-span delta (a single reading, not seven days of history), so
+    // deltaCm stays null rather than guess at a window it cannot confirm.
+    const lectura = bakedReading(estLoc);
+    const snapshot = estLoc ? byStation.get(estLoc.estacion) : null;
+    const measuredAt = snapshot?.timestamp ? new Date(snapshot.timestamp) : null;
+
+    return {
+      slug: loc.slug, nombre: loc.nombre, ownStation,
+      level: lectura.gauge ? lectura.gauge.level : null,
+      state: lectura.gauge ? lectura.gauge.state : null,
+      deltaCm: null,
+      measuredAtIso: measuredAt ? isoDateAR(measuredAt) : null,
+      measuredAtProsa: measuredAt ? prosaDateAR(measuredAt) : null,
+    };
+  });
+}
+
+function freshestOf(readings) {
+  return readings.reduce(
+    (best, r) => (r.measuredAtIso && (!best || r.measuredAtIso > best.measuredAtIso) ? r : best),
+    null,
+  );
+}
+
+/**
+ * The /rio/ hub: the page GSC shows ranking for generic queries like "altura
+ * rio parana" and "altura de los rios" while the city pages it sends readers
+ * to rank only position 7-9 for the same terms (2026-10, ~3300 impr/28d, 1
+ * click). `overrides` lets the daily refresh (scripts/refresh-river-landing.mjs)
+ * hand this the same per-station readings it just fetched from the INA,
+ * complete with a real ~24h delta; without it (a bare build, or this file's
+ * own tests) every number here comes from the build-time snapshot instead,
+ * with deltaCm always null — see hubReadings() above.
+ */
+export function indexPage(overrides = new Map()) {
+  const readings = hubReadings(overrides);
+  const stationCount = published.filter((l) => l.estacion).length;
+  const answer = hubAnswer(readings);
+  const dateProsa = freshestOf(readings)?.measuredAtProsa ?? null;
+
+  const jsonld = [
+    { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Paraná Info', item: SITE },
+      { '@type': 'ListItem', position: 2, name: 'Altura del río Paraná', item: `${SITE}/rio/` },
+    ] },
+    hubFaqJsonLd(),
+  ];
 
   return head({
-    title: 'Altura del río Paraná hoy — nivel del agua en todas las localidades | Paraná Info',
-    description: `Altura del río Paraná hoy en ${published.length} localidades, del Alto Paraná al Delta. Nivel del agua de la Prefectura Naval y servicios náuticos y de pesca.`,
+    title: hubTitle({ count: stationCount, dateProsa }),
+    description: hubDescription({ count: stationCount, readings, dateProsa }),
     canonical: `${SITE}/rio/`, jsonld,
   }) + `
 <main class="wrap" style="padding-top:2rem">
   <nav class="crumbs"><a href="/">Inicio</a> › Altura del río Paraná</nav>
   <h1>Altura del río Paraná hoy</h1>
-  <p class="lede">Nivel del agua en cada localidad, del Alto Paraná al Delta. Medición de la Prefectura Naval Argentina.</p>
-  <ul class="stations-grid">${published.map((l) => {
-    const n = (byLocality.get(l.slug) ?? []).length;
-    const lectura = bakedReading(l);
-    const nivel = lectura.level ? ` · ${esc(lectura.level)}` : '';
-    return `<li><a href="/rio/${l.slug}/">${esc(l.nombre)}</a> <span class="muted">${esc(l.provincia)}${nivel}${n ? ` · ${n} serv.` : ''}</span></li>`;
-  }).join('')}</ul>
-  <p class="stations-note">Niveles de referencia del último build. Cada localidad enlaza a su lectura actualizada de la Prefectura Naval.</p>
+  <p class="lede hub-answer">${answer
+    ? esc(answer)
+    : 'Nivel del agua en cada localidad, del Alto Paraná al Delta. Medición de la Prefectura Naval Argentina.'
+  }</p>
+
+  <section class="river-table">
+    <h2>Altura de los ríos de la cuenca del Paraná</h2>
+    ${hubTable(readings)}
+  </section>
+
+  <section class="faq" id="preguntas-frecuentes">
+    <h2>Preguntas frecuentes</h2>
+    <div class="faq-list">${hubFaqHtml()}</div>
+  </section>
 </main>
+${appBar('rio')}
+${appBarScript()}
 ${FOOT}`;
 }
 
