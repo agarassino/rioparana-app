@@ -79,7 +79,10 @@ export function hubAnswer(readings) {
   const withDelta = readings.filter((r) => r.ownStation && r.deltaCm !== null);
   const up = withDelta.filter((r) => r.deltaCm > 0).length;
   const down = withDelta.filter((r) => r.deltaCm < 0).length;
-  if (up + down > 0) text += `; ${up} estaciones suben y ${down} bajan`;
+  if (up + down > 0) {
+    const stations = (n) => (n === 1 ? '1 estación' : `${n} estaciones`);
+    text += `; ${stations(up)} sube${up === 1 ? '' : 'n'} y ${stations(down)} baja${down === 1 ? '' : 'n'}`;
+  }
 
   const freshest = freshestDate(headline);
   if (freshest) text += ` (medición de Prefectura del ${freshest.measuredAtProsa})`;

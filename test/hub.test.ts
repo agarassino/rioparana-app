@@ -55,7 +55,7 @@ describe('hubAnswer', () => {
   it('adds the suben/bajan clause only from readings with a delta', () => {
     const text = hubAnswer([corrientes, rosario]);
     // corrientes falls (-3), rosario rises (+5)
-    expect(text).toContain('1 estaciones suben y 1 bajan');
+    expect(text).toContain('1 estación sube y 1 estación baja');
   });
 
   it('never double-counts a borrowed reading as its own station', () => {
@@ -63,7 +63,17 @@ describe('hubAnswer', () => {
       slug: 'san-javier', nombre: 'San Javier', level: 2.4, deltaCm: -3, ownStation: false,
     });
     const text = hubAnswer([corrientes, rosario, borrowed]);
-    expect(text).toContain('1 estaciones suben y 1 bajan');
+    expect(text).toContain('1 estación sube y 1 estación baja');
+  });
+
+  it('pluralizes correctly for more than one station each way', () => {
+    const headlineOnly = reading({ slug: 'corrientes', nombre: 'Corrientes', level: 2.4 });
+    const many = Array.from({ length: 22 }, (_, i) =>
+      reading({ slug: `up-${i}`, nombre: `Up ${i}`, level: 1, deltaCm: 1 }));
+    const few = Array.from({ length: 16 }, (_, i) =>
+      reading({ slug: `down-${i}`, nombre: `Down ${i}`, level: 1, deltaCm: -1 }));
+    const text = hubAnswer([headlineOnly, ...many, ...few]);
+    expect(text).toContain('22 estaciones suben y 16 estaciones bajan');
   });
 
   it('omits the suben/bajan clause when no station has a delta', () => {

@@ -79,6 +79,12 @@ const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
   .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 const published = riverOrder(localidades.filter((l) => publishable(l, servicios)));
+// Localities with their own gauge, as opposed to `published.length` (which
+// also counts a locality that only borrows its neighbour's reading). This is
+// the number the site's existing copy means by "N estaciones" — see the
+// install bar's "38 estaciones" claim, checked against the artefact in
+// test/appBarPage.test.ts.
+const STATION_COUNT = published.filter((l) => l.estacion).length;
 
 // Alert and evacuation heights are stable reference values, so they are baked
 // into the page rather than fetched. That keeps the unique part of the text
@@ -520,9 +526,7 @@ export function localityPage(loc) {
   <nav class="crumbs"><a href="/">Inicio</a> › <a href="/rio/">Altura del río Paraná hoy</a> › ${esc(loc.nombre)}</nav>
 
   <h1>Altura del río Paraná en ${esParana ? `Paraná (${esc(loc.provincia)})` : esc(loc.nombre)}</h1>
-${esParana ? `
-  <p class="hub-callout"><a href="/rio/">¿Buscás la altura en todo el río Paraná? Ver las ${published.length} estaciones →</a></p>` : ''}
-
+${esParana ? `  <p class="hub-callout"><a href="/rio/">¿Buscás la altura en todo el río Paraná? Ver las ${STATION_COUNT} estaciones →</a></p>\n` : ''}
   <section class="river-now">
     <h2>El río hoy</h2>
     <p class="river-figure"><span id="river-now" class="st-level"${
@@ -624,7 +628,7 @@ function freshestOf(readings) {
  */
 export function indexPage(overrides = new Map()) {
   const readings = hubReadings(overrides);
-  const stationCount = published.filter((l) => l.estacion).length;
+  const stationCount = STATION_COUNT;
   const answer = hubAnswer(readings);
   const dateProsa = freshestOf(readings)?.measuredAtProsa ?? null;
 
