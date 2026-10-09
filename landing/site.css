@@ -524,3 +524,32 @@ main > section + section { margin-top: var(--space-lg); }
 /* Alert sits near the top of the scale by construction, so its label is
    anchored to the mark rather than centred on it, which would overflow. */
 .gauge-mark-end b { transform: translateX(-100%); padding-right: 4px; }
+
+/* ---------- RIVER HUB ---------- */
+/* The line a reader who searched the whole river (not one locality) lands on
+   first: a short, visually distinct callout rather than body text, so it
+   reads as a signpost instead of another paragraph to skim past. */
+.hub-callout { background: var(--color-accent-bg); border-radius: var(--radius-sm, 4px);
+  padding: var(--space-sm) var(--space-md); margin: var(--space-sm) 0 var(--space-md);
+  font-family: var(--font-mono); font-size: var(--text-sm); }
+.hub-callout a { color: var(--color-accent); }
+
+/* The table scrolls inside its own box at narrow widths rather than widening
+   the page — min-width keeps every column legible instead of crushing it. */
+.table-wrap { overflow-x: auto; margin: var(--space-md) 0 var(--space-lg);
+  -webkit-overflow-scrolling: touch; }
+.hub-table { border-collapse: collapse; width: 100%; min-width: 34rem; font-size: var(--text-sm); }
+.hub-table caption { text-align: left; font-family: var(--font-mono); font-size: var(--text-xs);
+  color: var(--color-muted); margin-bottom: var(--space-2xs); }
+.hub-table th, .hub-table td { padding: 8px 12px; border-bottom: var(--rule-hair) solid var(--color-rule);
+  text-align: left; white-space: nowrap; }
+.hub-table th[scope="row"] { font-weight: 600; white-space: normal; }
+.hub-table th[scope="row"] a { color: var(--color-ink); text-decoration: none; }
+.hub-table th[scope="row"] a:hover { color: var(--color-accent); text-decoration: underline; }
+.hub-table thead th { font-family: var(--font-mono); font-size: var(--text-xs);
+  text-transform: uppercase; letter-spacing: .04em; color: var(--color-muted); }
+.hub-state { font-weight: 600; }
+.hub-state[data-state="normal"] { color: var(--color-accent); }
+.hub-state[data-state="near-alert"], .hub-state[data-state="alert"],
+.hub-state[data-state="evacuation"] { color: var(--color-emergency); }
+.hub-delta { color: var(--color-ink-2); font-variant-numeric: tabular-nums; }
