@@ -29,6 +29,7 @@ jobs:
         env:
           # Busy stations that report daily; one silent station must not page.
           STATIONS: rosario parana corrientes san-pedro zarate
+          HUB_URL: https://rioparana.com.ar/rio/
           MAX_AGE_DAYS: '2'
         run: |
           set -euo pipefail
@@ -40,6 +41,15 @@ jobs:
             echo "$s: ${d:-no date found}"
             if [ -n "$d" ] && [[ "$d" > "$newest" ]]; then newest=$d; fi
           done
+
+          # The hub (/rio/) bakes one <time> per station row in its table
+          # rather than a single "del <time>" sentence, so the newest row —
+          # not the first match — is the one worth comparing here.
+          hub=$(curl -fsS --max-time 20 "$HUB_URL" \
+            | grep -oE '<time datetime="[0-9]{4}-[0-9]{2}-[0-9]{2}"' \
+            | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | sort | tail -1 || true)
+          echo "rio (hub): ${hub:-no date found}"
+          if [ -n "$hub" ] && [[ "$hub" > "$newest" ]]; then newest=$hub; fi
 
           if [ -z "$newest" ]; then
             echo "::error::No reading date found on any page. Did the markup change?"
