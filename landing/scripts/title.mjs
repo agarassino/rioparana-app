@@ -33,3 +33,24 @@ export function riverTitle({ nombre, level, alertLevel, fallback }) {
   const full = `${head} — Prefectura`;
   return full.length <= MAX_LEN ? full : head;
 }
+
+/**
+ * <title> for the /rio/ hub: the intent ("altura hoy") plus how many stations
+ * answer it, with today's date appended only when it still fits under
+ * MAX_LEN. Shared by build-directory.mjs (indexPage) and the daily refresh
+ * (scripts/refresh-river-landing.mjs), so both can only ever produce the one
+ * shape this function defines.
+ *
+ * @param {object} p
+ * @param {number} p.count            stations with their own gauge (not every
+ *                                    published locality — see build-directory.mjs)
+ * @param {string|null} [p.dateProsa] "8 de octubre de 2026", or omitted/null
+ */
+export function hubTitle({ count, dateProsa }) {
+  const base = `Altura del río Paraná hoy: ${count} estaciones`;
+  const withDate = dateProsa ? `${base}, ${dateProsa} — Prefectura` : null;
+  if (withDate && withDate.length <= MAX_LEN) return withDate;
+
+  const withBrand = `${base} — Prefectura`;
+  return withBrand.length <= MAX_LEN ? withBrand : base;
+}

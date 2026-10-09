@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 // @ts-expect-error plain .mjs without types
-import { riverTitle } from '../landing/scripts/title.mjs';
+import { riverTitle, hubTitle } from '../landing/scripts/title.mjs';
 
 describe('riverTitle', () => {
   it('leads with the reading and the alert threshold', () => {
@@ -23,5 +23,24 @@ describe('riverTitle', () => {
     expect(riverTitle({ nombre: 'Rosario', level: null, alertLevel: 5 }))
       .toBe('Altura del río Paraná en Rosario hoy — Prefectura Naval | Paraná Info');
     expect(riverTitle({ nombre: 'Paraná (Entre Ríos)', level: null, alertLevel: 4.7, fallback: 'X' })).toBe('X');
+  });
+});
+
+describe('hubTitle', () => {
+  it('leads with the intent and the station count', () => {
+    const t = hubTitle({ count: 38 });
+    expect(t).toBe('Altura del río Paraná hoy: 38 estaciones — Prefectura');
+    expect(t.length).toBeLessThanOrEqual(65);
+  });
+
+  it('drops the date when it would exceed 65 characters', () => {
+    const t = hubTitle({ count: 38, dateProsa: '8 de octubre de 2026' });
+    expect(t).toBe('Altura del río Paraná hoy: 38 estaciones — Prefectura');
+  });
+
+  it('stays under 65 characters for every real station count', () => {
+    for (const count of [1, 9, 38, 39, 100]) {
+      expect(hubTitle({ count }).length).toBeLessThanOrEqual(65);
+    }
   });
 });

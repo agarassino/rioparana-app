@@ -75,7 +75,9 @@ function contarServicios(servicios) {
   });
 }
 
-function listar(items) {
+// Exported for hub.mjs, which joins reference-station clauses in the /rio/
+// hub's lead sentence the same way this file joins service counts.
+export function listar(items) {
   if (items.length <= 1) return items.join('');
   return `${items.slice(0, -1).join(', ')} y ${items[items.length - 1]}`;
 }
