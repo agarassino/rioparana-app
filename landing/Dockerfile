@@ -2,6 +2,9 @@ FROM nginx:1.27-alpine
 COPY default.conf /etc/nginx/conf.d/default.conf
 COPY index.html /usr/share/nginx/html/index.html
 COPY privacy-policy.html /usr/share/nginx/html/privacy-policy.html
+COPY sobre-nosotros.html /usr/share/nginx/html/sobre-nosotros.html
+COPY contacto.html /usr/share/nginx/html/contacto.html
+COPY terminos.html /usr/share/nginx/html/terminos.html
 COPY leaflet.css /usr/share/nginx/html/leaflet.css
 COPY leaflet.js /usr/share/nginx/html/leaflet.js
 COPY leaflet.markercluster.js /usr/share/nginx/html/leaflet.markercluster.js
