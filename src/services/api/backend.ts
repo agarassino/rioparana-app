@@ -1,19 +1,7 @@
 import { CurrentWeather, LocationWeather, NewsItem, WaterLevel, WeatherForecast } from '../../types';
 
-// Shared backend cache used when PNA cannot be reached (for example, from
-// outside Argentina). Release builds use the production API by default, while
-// EXPO_PUBLIC_* variables allow environment-specific overrides.
-const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_BASE_URL || 'https://api.rioparana.com.ar';
-const API_KEY = process.env.EXPO_PUBLIC_APP_API_KEY || '';
-
-const REQUEST_TIMEOUT_MS = 5000;
-
-function withTimeout(ms: number): { signal: AbortSignal; clear: () => void } {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), ms);
-  return { signal: controller.signal, clear: () => clearTimeout(id) };
-}
+import { API_BASE_URL, API_KEY, REQUEST_TIMEOUT_MS, withTimeout } from './http';
+import { authedFetch } from './authedFetch';
 
 interface StoredLevel {
   stationId: string;
@@ -255,20 +243,8 @@ export async function pushBackendLevels(levels: WaterLevel[]): Promise<void> {
 // looking at. It carries a random local identifier and nothing about the
 // person: enough to count devices and see which stations matter, which is the
 // difference between deciding and guessing.
-export async function pingDevice(deviceId: string, stationId?: string): Promise<void> {
-  const timeout = withTimeout(REQUEST_TIMEOUT_MS);
-  try {
-    await fetch(`${API_BASE_URL}/devices/ping`, {
-      method: 'POST',
-      headers: { 'x-api-key': API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify(stationId ? { deviceId, stationId } : { deviceId }),
-      signal: timeout.signal,
-    });
-  } catch {
-    // Telemetry must never break a screen.
-  } finally {
-    timeout.clear();
-  }
+export async function pingDevice(stationId?: string): Promise<void> {
+  try { await authedFetch('/me/ping', { method: 'POST', body: stationId ? { stationId } : {} }); } catch { /* Best-effort telemetry. */ }
 }
 
 export interface HistoryPoint {
@@ -338,43 +314,15 @@ function isStoredNotification(value: unknown): value is StoredNotification {
 // Register, replace, or clear this device's push token. Null turns
 // notifications off. Never throws: it runs on app start, and a rejected
 // promise there would take a screen down over something nobody asked for.
-export async function registerPushToken(
-  deviceId: string,
-  pushToken: string | null
-): Promise<void> {
-  const timeout = withTimeout(REQUEST_TIMEOUT_MS);
-  try {
-    await fetch(`${API_BASE_URL}/devices/push-token`, {
-      method: 'POST',
-      headers: { 'x-api-key': API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ deviceId, pushToken }),
-      signal: timeout.signal,
-    });
-  } catch {
-    // Registration retries on the next launch; it is not worth a visible error.
-  } finally {
-    timeout.clear();
-  }
+export async function registerPushToken(pushToken: string | null): Promise<void> {
+  try { await authedFetch('/me/push-token', { method: 'PUT', body: { pushToken } }); } catch { /* Retry on next launch. */ }
 }
 
-// What this device was sent. Read from the server rather than kept on the
-// device, so the list survives a reinstall and matches what was really sent.
-export async function getNotificationHistory(deviceId: string): Promise<StoredNotification[]> {
-  const timeout = withTimeout(REQUEST_TIMEOUT_MS);
+export async function getNotificationHistory(): Promise<StoredNotification[]> {
   try {
-    const res = await fetch(
-      `${API_BASE_URL}/notifications?deviceId=${encodeURIComponent(deviceId)}`,
-      { headers: { 'x-api-key': API_KEY, Accept: 'application/json' }, signal: timeout.signal }
-    );
-    if (!res.ok) return [];
-
+    const res = await authedFetch('/me/notifications');
+    if (!res?.ok) return [];
     const body: unknown = await res.json();
-    if (!Array.isArray(body)) return [];
-
-    return body.filter(isStoredNotification);
-  } catch {
-    return [];
-  } finally {
-    timeout.clear();
-  }
+    return Array.isArray(body) ? body.filter(isStoredNotification) : [];
+  } catch { return []; }
 }

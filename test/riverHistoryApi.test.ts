@@ -1,3 +1,5 @@
+// Keep native credential storage outside the pure river-data test graph.
+vi.mock('../src/services/api/authedFetch', () => ({ authedFetch: vi.fn() }));
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { getBackendHistory } from '../src/services/api/backend';
 
