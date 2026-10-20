@@ -151,5 +151,48 @@ export async function buildAdminServer(opts: AdminServerOptions): Promise<Fastif
     return page(reply, 200, inboxPage({ filter, rows, csrf: req.adminSession!.csrf }));
   });
 
+  app.get('/admin/threads/:id', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    if (!UUID.test(id)) return notFound(reply);
+    const thread = await getThreadForAdmin(opts.pool, id);
+    if (!thread) return notFound(reply);
+    return page(reply, 200, threadPage({ thread, csrf: req.adminSession!.csrf }));
+  });
+
+  app.post('/admin/threads/:id/reply', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    if (!UUID.test(id)) return notFound(reply);
+
+    const parsed = parseInput(newMessageSchema, { body: formField(req, 'body') });
+    if (!parsed.ok) {
+      const thread = await getThreadForAdmin(opts.pool, id);
+      if (!thread) return notFound(reply);
+      return page(reply, 400, threadPage({
+        thread, csrf: req.adminSession!.csrf,
+        message: 'La respuesta no puede estar vacía ni superar 2000 caracteres.',
+      }));
+    }
+
+    const result = await replyAsAdmin(opts.pool, id, parsed.data.body, now());
+    if (result === 'not_found') return notFound(reply);
+    if (result === 'sent') {
+      // The reply is already stored; a push failure must not undo or hide it.
+      try {
+        const outcome = await notifyReply(opts.pool, id, { fetchFn: opts.pushFetch, now: now() });
+        req.log.info({ threadId: id, outcome }, 'reply push');
+      } catch (err) {
+        req.log.warn({ err, threadId: id }, 'reply push failed');
+      }
+    }
+    return reply.redirect(`/admin/threads/${id}`, 303);
+  });
+
+  app.post('/admin/threads/:id/archive', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    if (!UUID.test(id)) return notFound(reply);
+    if (!(await archiveThread(opts.pool, id, now()))) return notFound(reply);
+    return reply.redirect('/admin', 303);
+  });
+
   return app;
 }

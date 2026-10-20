@@ -159,3 +159,161 @@ describe('headers', () => {
     await a.close();
   });
 });
+
+describe('inbox and thread', () => {
+  it('lists pending threads and shows one', async () => {
+    const a = await admin();
+    const t = await newThread();
+    const { cookie } = await session(a);
+
+    const inbox = await a.inject({ method: 'GET', url: '/admin?filter=pending', headers: { cookie } });
+    const detail = await a.inject({ method: 'GET', url: `/admin/threads/${t.id}`, headers: { cookie } });
+
+    expect(inbox.body).toContain(`/admin/threads/${t.id}`);
+    expect(detail.statusCode).toBe(200);
+    expect(detail.body).toContain('¿Hay datos de Goya?');
+    await a.close();
+  });
+
+  it('renders a stored script tag as text', async () => {
+    const a = await admin();
+    const t = await newThread('<script>alert(document.cookie)</script>');
+    const { cookie } = await session(a);
+
+    const inbox = await a.inject({ method: 'GET', url: '/admin', headers: { cookie } });
+    const detail = await a.inject({ method: 'GET', url: `/admin/threads/${t.id}`, headers: { cookie } });
+
+    for (const page of [inbox.body, detail.body]) {
+      expect(page).not.toContain('<script>alert');
+      expect(page).toContain('&lt;script&gt;alert(document.cookie)&lt;/script&gt;');
+    }
+    await a.close();
+  });
+});
+
+describe('reply', () => {
+  it('stores the reply, answers the thread, audits it and pushes without the text', async () => {
+    await savePushToken(pool, A, PUSH);
+    const a = await admin();
+    const t = await newThread();
+    const { cookie, csrf } = await session(a);
+
+    const res = await postForm(a, `/admin/threads/${t.id}/reply`, cookie, { _csrf: csrf, body: 'Sí, desde mañana' });
+
+    expect(res.statusCode).toBe(303);
+    expect(res.headers.location).toBe(`/admin/threads/${t.id}`);
+    const detail = await getThreadForAdmin(pool, t.id);
+    expect(detail?.status).toBe('answered');
+    expect(detail?.messages.at(-1)).toMatchObject({ author: 'admin', body: 'Sí, desde mañana' });
+    expect((await listAudit(pool)).map((e) => e.action)).toEqual(['login', 'reply']);
+    expect(pushFetch).toHaveBeenCalledTimes(1);
+    expect(String(pushFetch.mock.calls[0][1].body)).not.toContain('desde mañana');
+    await a.close();
+  });
+
+  it('refuses a reply without the session CSRF token', async () => {
+    const a = await admin();
+    const t = await newThread();
+    const { cookie } = await session(a);
+
+    const res = await postForm(a, `/admin/threads/${t.id}/reply`, cookie, { body: 'sin token' });
+
+    expect(res.statusCode).toBe(404);
+    expect((await getThreadForAdmin(pool, t.id))?.messages).toHaveLength(1);
+    await a.close();
+  });
+
+  it('a reply to a device without a push token still lands', async () => {
+    const a = await admin();
+    const t = await newThread();
+    const { cookie, csrf } = await session(a);
+
+    const res = await postForm(a, `/admin/threads/${t.id}/reply`, cookie, { _csrf: csrf, body: 'Respuesta' });
+
+    expect(res.statusCode).toBe(303);
+    expect((await getThreadForAdmin(pool, t.id))?.messages).toHaveLength(2);
+    expect(pushFetch).not.toHaveBeenCalled();
+    await a.close();
+  });
+
+  it('a reply still lands when Expo is unreachable', async () => {
+    await savePushToken(pool, A, PUSH);
+    const offline = vi.fn(async () => { throw new Error('ECONNRESET'); });
+    const a = await admin({ pushFetch: offline as unknown as typeof fetch });
+    const t = await newThread();
+    const { cookie, csrf } = await session(a);
+
+    const res = await postForm(a, `/admin/threads/${t.id}/reply`, cookie, { _csrf: csrf, body: 'Respuesta' });
+
+    expect(res.statusCode).toBe(303);
+    expect((await getThreadForAdmin(pool, t.id))?.messages).toHaveLength(2);
+    await a.close();
+  });
+
+  it('a double-submitted reply stores one message and sends one push', async () => {
+    await savePushToken(pool, A, PUSH);
+    const a = await admin();
+    const t = await newThread();
+    const { cookie, csrf } = await session(a);
+
+    await postForm(a, `/admin/threads/${t.id}/reply`, cookie, { _csrf: csrf, body: 'Una vez' });
+    const second = await postForm(a, `/admin/threads/${t.id}/reply`, cookie, { _csrf: csrf, body: 'Una vez' });
+
+    expect(second.statusCode).toBe(303);
+    expect((await getThreadForAdmin(pool, t.id))?.messages).toHaveLength(2);
+    expect(pushFetch).toHaveBeenCalledTimes(1);
+    await a.close();
+  });
+
+  it('re-renders the thread with a message for an empty reply', async () => {
+    const a = await admin();
+    const t = await newThread();
+    const { cookie, csrf } = await session(a);
+
+    const res = await postForm(a, `/admin/threads/${t.id}/reply`, cookie, { _csrf: csrf, body: '   ' });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toContain('La respuesta no puede estar vacía ni superar 2000 caracteres.');
+    expect((await getThreadForAdmin(pool, t.id))?.messages).toHaveLength(1);
+    await a.close();
+  });
+});
+
+describe('archive', () => {
+  it('archives without replying and audits it', async () => {
+    const a = await admin();
+    const t = await newThread();
+    const { cookie, csrf } = await session(a);
+
+    const res = await postForm(a, `/admin/threads/${t.id}/archive`, cookie, { _csrf: csrf });
+
+    expect(res.statusCode).toBe(303);
+    expect(res.headers.location).toBe('/admin');
+    expect((await getThreadForAdmin(pool, t.id))?.status).toBe('archived');
+    expect((await listAudit(pool)).map((e) => e.action)).toEqual(['login', 'archive']);
+    expect(pushFetch).not.toHaveBeenCalled();
+    await a.close();
+  });
+});
+
+describe('admin server faults', () => {
+  it('returns generic JSON for an internal fault without losing security headers', async () => {
+    const a = await admin();
+    const auth = await session(a);
+    const query = vi.spyOn(pool, 'query').mockRejectedValueOnce(new Error('private SQL host and credentials'));
+    try {
+      const res = await a.inject({ method: 'GET', url: '/admin', headers: { cookie: auth.cookie } });
+      expect(res.statusCode).toBe(500);
+      expect(res.headers['content-type']).toContain('application/json');
+      expect(res.json()).toEqual({ error: 'internal' });
+      expect(res.body).not.toContain('private SQL');
+      expect(res.headers['content-security-policy']).toBe("default-src 'self'");
+      expect(res.headers['x-frame-options']).toBe('DENY');
+      expect(res.headers['referrer-policy']).toBe('no-referrer');
+      expect(res.headers['cache-control']).toBe('no-store');
+    } finally {
+      query.mockRestore();
+      await a.close();
+    }
+  });
+});
