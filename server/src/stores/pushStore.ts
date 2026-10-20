@@ -1,4 +1,4 @@
-import type { Pool } from 'pg';
+import type { Queryable } from '../db/transaction.js';
 
 // Push tokens and the record of what was sent.
 //
@@ -23,7 +23,7 @@ export interface StoredNotification {
 
 /** Register, replace, or clear a device's push token. */
 export async function savePushToken(
-  pool: Pool,
+  pool: Queryable,
   deviceId: string,
   token: string | null,
   now: Date = new Date(),
@@ -41,7 +41,7 @@ export async function savePushToken(
 }
 
 /** Every device that can be reached, with the station it cares about. */
-export async function subscribers(pool: Pool): Promise<Subscriber[]> {
+export async function subscribers(pool: Queryable): Promise<Subscriber[]> {
   // Two flat queries joined here rather than one with a correlated subquery:
   // pg-mem cannot plan the correlated form, and a store that only works against
   // the real database is a store with no tests.
@@ -72,7 +72,7 @@ export async function subscribers(pool: Pool): Promise<Subscriber[]> {
 
 /** Keep what was sent, so the app can show the list rather than keep its own. */
 export async function recordNotification(
-  pool: Pool,
+  pool: Queryable,
   deviceId: string,
   stationId: string,
   title: string,
@@ -88,7 +88,7 @@ export async function recordNotification(
 
 /** What this device was sent, newest first. */
 export async function getNotifications(
-  pool: Pool,
+  pool: Queryable,
   deviceId: string,
   limit = 50,
 ): Promise<StoredNotification[]> {

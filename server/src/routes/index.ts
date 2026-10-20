@@ -1,3 +1,4 @@
+import { registerDeviceRoutes } from './devices.js';
 import { FastifyInstance } from 'fastify';
 import type { Pool } from 'pg';
 import { z } from 'zod';
@@ -172,4 +173,5 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     ]);
     return { river, news };
   });
+  registerDeviceRoutes(app, { pool });
 }

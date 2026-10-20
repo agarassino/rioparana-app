@@ -1,7 +1,7 @@
-import type { Pool } from 'pg';
+import type { Queryable } from '../db/transaction.js';
 
 export async function pingDevice(
-  pool: Pool,
+  pool: Queryable,
   deviceId: string,
   stationId?: string,
   now: Date = new Date()
