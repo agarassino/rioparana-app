@@ -1,3 +1,4 @@
+import { routeForNotification } from '../src/services/notificationRoute';
 import { Stack, useRouter } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
@@ -12,7 +13,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import * as Notifications from 'expo-notifications';
 import { COLORS } from '../src/config/theme';
-import { usePushRegistration } from '../src/hooks';
+import { useDeviceRegistration, usePushRegistration } from '../src/hooks';
 
 // Mantener splash screen visible mientras cargan las fuentes
 SplashScreen.preventAutoHideAsync();
@@ -29,14 +30,18 @@ const queryClient = new QueryClient({
 // A tapped notification carries { screen: 'notifications' }, set by the server
 // when it composed the message. Handled at the root so it works whether the app
 // was cold, backgrounded, or already open.
-function useNotificationTaps(): void {
+// A tapped notification says where it leads: the daily one to the list, a
+// reply to its thread. Handled at the root so it works whether the app was
+// cold, backgrounded, or already open.
+function useNotificationTaps(enabled: boolean): void {
   const router = useRouter();
 
   useEffect(() => {
+    if (!enabled) return;
+    let active = true;
     const open = (data: unknown) => {
-      if ((data as { screen?: string } | null)?.screen === 'notifications') {
-        router.push('/notificaciones');
-      }
+      const route = routeForNotification(data);
+      if (active && route) router.push(route);
     };
 
     // Cold start: the tap that launched the app is waiting here rather than
@@ -45,23 +50,36 @@ function useNotificationTaps(): void {
       .then((r) => open(r?.notification.request.content.data))
       .catch(() => undefined);
 
-    const sub = Notifications.addNotificationResponseReceivedListener((r) =>
+    const tapped = Notifications.addNotificationResponseReceivedListener((r) =>
       open(r.notification.request.content.data),
     );
 
-    return () => sub.remove();
-  }, [router]);
+    // A reply arriving while the app is open refreshes the list and its dot.
+    const received = Notifications.addNotificationReceivedListener((n) => {
+      if ((n.request.content.data as { type?: unknown } | null)?.type === 'feedback_reply') {
+        void queryClient.invalidateQueries({ queryKey: ['feedback'] });
+      }
+    });
+
+    return () => {
+      active = false;
+      tapped.remove();
+      received.remove();
+    };
+  }, [router, enabled]);
 }
 
 export default function RootLayout() {
+  useDeviceRegistration();
   usePushRegistration();
-  useNotificationTaps();
 
   const [fontsLoaded] = useFonts({
     Nunito_400Regular,
     Nunito_600SemiBold,
     Nunito_700Bold,
   });
+
+  useNotificationTaps(fontsLoaded);
 
   useEffect(() => {
     if (fontsLoaded) {
@@ -87,6 +105,8 @@ export default function RootLayout() {
             headerTitleStyle: { fontFamily: 'Nunito_700Bold' },
           }}
         >
+          <Stack.Screen name="contacto/index" options={{ title: 'Contacto y sugerencias', headerBackTitle: 'Volver' }} />
+          <Stack.Screen name="contacto/[threadId]" options={{ title: 'Conversación', headerBackTitle: 'Volver' }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen
             name="river/[stationId]"
