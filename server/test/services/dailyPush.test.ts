@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { newDb } from 'pg-mem';
-import { runMigrations } from '../../src/db/index.js';
+import { memPool } from '../helpers/memPool.js';
 import { pingDevice } from '../../src/stores/deviceStore.js';
 import { upsertWaterLevel } from '../../src/stores/riverStore.js';
 import { recordReading } from '../../src/stores/riverHistory.js';
@@ -45,10 +44,7 @@ async function givenReading(stationId: string, level: number, hours = 2) {
 }
 
 beforeEach(async () => {
-  const mem = newDb();
-  const { Pool } = mem.adapters.createPg();
-  pool = new Pool();
-  await runMigrations(pool);
+  pool = await memPool();
   sent = [];
 });
 

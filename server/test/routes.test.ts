@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { newDb } from 'pg-mem';
-import { runMigrations } from '../src/db/index.js';
+import { memPool } from './helpers/memPool.js';
 import { upsertWaterLevel } from '../src/stores/riverStore.js';
 import { replaceNews } from '../src/stores/newsStore.js';
 import { buildServer } from '../src/server.js';
@@ -20,10 +19,7 @@ function recentIso(): string {
 let pool: Pool;
 
 beforeEach(async () => {
-  const mem = newDb();
-  const { Pool } = mem.adapters.createPg();
-  pool = new Pool();
-  await runMigrations(pool);
+  pool = await memPool();
 });
 
 async function app(opts: { refreshFetch?: typeof fetch; refreshToken?: string } = {}) {
