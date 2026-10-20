@@ -16,12 +16,15 @@ export interface BuildServerOptions {
 export async function buildServer(opts: BuildServerOptions = {}): Promise<FastifyInstance> {
   // Fastify 5 treats a numeric trustProxy as hop-count-only trust and fails
   // it closed (cannot validate the immediate peer, so it never trusts
-  // forwarded headers) — the same outcome `trustProxy: 1` already produced
-  // at runtime post-upgrade, just not a valid TS literal any more. `false`
-  // makes that explicit without changing behavior. Task 2 rewrites this file
-  // and owns the real decision (a specific trusted proxy IP/CIDR) once the
-  // production reverse-proxy topology is known.
-  const app = Fastify({ logger: false, trustProxy: false });
+  // forwarded headers) — `trustProxy: 1` stopped type-checking for exactly
+  // that reason. In production Traefik reaches this container over the
+  // private Docker network, so the immediate peer is always one of these
+  // ranges; a connection arriving directly from a public address is NOT
+  // trusted (its own socket address is used, forwarded headers are
+  // ignored), which is what stops a client from spoofing X-Forwarded-For to
+  // fake another IP. This keeps the per-IP rate limiter (see
+  // `opts.rateLimit` below) keyed on the real client, not Traefik's address.
+  const app = Fastify({ logger: false, trustProxy: 'loopback, linklocal, uniquelocal' });
 
   if (opts.rateLimit) {
     await app.register(rateLimit, { max: 120, timeWindow: '1 minute' });
