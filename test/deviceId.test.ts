@@ -65,3 +65,11 @@ describe('getDeviceId', () => {
     expect(await getDeviceId()).toMatch(UUID_V4);
   });
 });
+
+test('rotation replaces persisted identity', async () => {
+ const service = await load(); const before = await service.getDeviceId();
+ const after = await service.rotateDeviceId();
+ expect(after).toMatch(UUID_V4); expect(after).not.toBe(before);
+ expect(await service.getDeviceId()).toBe(after);
+ expect(store.get('parana-info.device-id')).toBe(after);
+});

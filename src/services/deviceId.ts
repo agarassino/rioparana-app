@@ -59,3 +59,10 @@ export async function getDeviceId(): Promise<string> {
   cached = id;
   return id;
 }
+
+export async function rotateDeviceId(): Promise<string> {
+  const id = newDeviceId();
+  try { await SecureStore.setItemAsync(KEY, id); } catch { /* Session identity remains usable. */ }
+  cached = id;
+  return id;
+}
