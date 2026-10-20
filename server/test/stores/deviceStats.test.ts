@@ -1,3 +1,4 @@
+import { registerDevice } from '../../src/stores/deviceTokenStore.js';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { memPool } from '../helpers/memPool.js';
 import { pingDevice } from '../../src/stores/deviceStore.js';
@@ -120,5 +121,23 @@ describe('notification reach', () => {
     await recordNotification(pool, B, 'goya', 'T', 'B', daysAgo(2));
 
     expect((await getDeviceStats(pool, NOW)).push.reachedLast7Days).toBe(2);
+  });
+});
+
+describe('token share', () => {
+  it('reports how many active devices already hold a token', async () => {
+    const now = new Date('2026-10-13T12:00:00.000Z');
+    await pingDevice(pool, '11111111-1111-4111-8111-111111111111', undefined, now);
+    await pingDevice(pool, '22222222-2222-4222-8222-222222222222', undefined, now);
+    await registerDevice(pool, '22222222-2222-4222-8222-222222222222', 'h', now);
+
+    const stats = await getDeviceStats(pool, now);
+
+    expect(stats.auth).toEqual({ activeWithToken: 1, shareOfActive: 0.5 });
+  });
+
+  it('reports a zero share rather than dividing by zero', async () => {
+    const stats = await getDeviceStats(pool, new Date('2026-10-13T12:00:00.000Z'));
+    expect(stats.auth).toEqual({ activeWithToken: 0, shareOfActive: 0 });
   });
 });

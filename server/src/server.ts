@@ -13,6 +13,7 @@ export interface BuildServerOptions {
   weatherDeps?: { fetchFn?: typeof fetch };
   refreshFetch?: typeof fetch;
   refreshToken?: string;
+  legacyDeviceRoutes?: boolean;
   rateLimit?: boolean;
   /** Omitted in tests: the suite stays quiet unless a test captures logs. */
   logger?: LoggerConfig;
@@ -73,6 +74,7 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<Fastif
       weatherDeps: opts.weatherDeps,
       refreshFetch: opts.refreshFetch,
       refreshToken: opts.refreshToken,
+      legacyDeviceRoutes: opts.legacyDeviceRoutes,
     });
 
   return app;

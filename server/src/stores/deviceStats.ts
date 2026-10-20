@@ -21,11 +21,19 @@ export interface PushStats {
   lastSentAt: string | null;
 }
 
+export interface AuthStats {
+  /** Active devices holding a token, i.e. running 2.2.0 or later. */
+  activeWithToken: number;
+  /** activeWithToken / activeLast7Days, three decimals; 0 when nobody is active. */
+  shareOfActive: number;
+}
+
 export interface DeviceStats {
   devices: number;
   activeLast7Days: number;
   stations: StationUsage[];
   push: PushStats;
+  auth: AuthStats;
 }
 
 export async function getDeviceStats(pool: Pool, now: Date = new Date()): Promise<DeviceStats> {
@@ -35,7 +43,8 @@ export async function getDeviceStats(pool: Pool, now: Date = new Date()): Promis
     // SUM(CASE ...) rather than COUNT(*) FILTER: the filter clause is not
     // supported everywhere the tests run, and silently counted every row.
     `SELECT COUNT(*) AS devices,
-            SUM(CASE WHEN last_seen >= $1 THEN 1 ELSE 0 END) AS active
+            SUM(CASE WHEN last_seen >= $1 THEN 1 ELSE 0 END) AS active,
+            SUM(CASE WHEN last_seen >= $1 AND token_hash IS NOT NULL THEN 1 ELSE 0 END) AS active_tokened
      FROM devices`,
     [since.toISOString()]
   );
@@ -51,9 +60,16 @@ export async function getDeviceStats(pool: Pool, now: Date = new Date()): Promis
      ORDER BY views DESC, station_id`
   );
 
+  const active = Number(totals.rows[0]?.active ?? 0);
+  const activeWithToken = Number(totals.rows[0]?.active_tokened ?? 0);
+
   return {
     devices: Number(totals.rows[0]?.devices ?? 0),
-    activeLast7Days: Number(totals.rows[0]?.active ?? 0),
+    activeLast7Days: active,
+    auth: {
+      activeWithToken,
+      shareOfActive: active === 0 ? 0 : Math.round((activeWithToken / active) * 1000) / 1000,
+    },
     push,
     stations: stations.rows.map((r) => ({
       stationId: r.station_id as string,
