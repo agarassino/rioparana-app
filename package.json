@@ -13,7 +13,8 @@
     "test:components": "jest",
     "verify": "npm run typecheck && npm test",
     "e2e": "maestro --platform android test .maestro/river-detail.yaml",
-    "landing:regen": "node landing/scripts/build-directory.mjs && node scripts/refresh-river-landing.mjs"
+    "landing:regen": "node landing/scripts/build-directory.mjs && node scripts/refresh-river-landing.mjs",
+    "e2e:feedback": "bash scripts/e2e-feedback.sh"
   },
   "dependencies": {
     "@expo-google-fonts/nunito": "^0.4.2",

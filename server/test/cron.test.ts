@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { newDb } from 'pg-mem';
-import { runMigrations } from '../src/db/index.js';
+import { memPool } from './helpers/memPool.js';
 import { getWaterLevel } from '../src/stores/riverStore.js';
 import { getNews } from '../src/stores/newsStore.js';
 import { refreshRiver, refreshNews } from '../src/cron.js';
@@ -9,10 +8,7 @@ import type { Pool } from 'pg';
 
 let pool: Pool;
 beforeEach(async () => {
-  const mem = newDb();
-  const { Pool } = mem.adapters.createPg();
-  pool = new Pool();
-  await runMigrations(pool);
+  pool = await memPool();
 });
 
 const riverHtml = `<td><i></i> 2026-01-16 <i></i> 00:00</td><td>2.77 Mts</td>`;

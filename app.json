@@ -2,7 +2,7 @@
   "expo": {
     "name": "Paran\u00e1 Info",
     "slug": "rioparana-app",
-    "version": "2.1.0",
+    "version": "2.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",

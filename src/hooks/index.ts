@@ -7,3 +7,6 @@ export { useRiverHistory } from './useRiverHistory';
 export { usePushRegistration } from './usePushRegistration';
 export { useNotificationHistory } from './useNotificationHistory';
 export { useSharePrompt } from './useSharePrompt';
+
+export { useDeviceRegistration } from './useDeviceRegistration';
+export { useFeedbackThreads, useFeedbackThread, useSendFeedback, useReplyToThread } from './useFeedback';

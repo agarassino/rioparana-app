@@ -1,8 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { newDb } from 'pg-mem';
+import { memPool } from './helpers/memPool.js';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { runMigrations } from '../src/db/index.js';
 import { getWaterLevel } from '../src/stores/riverStore.js';
 import { refreshRiverFromIndex } from '../src/cron.js';
 import type { Pool } from 'pg';
@@ -14,10 +13,7 @@ const FIXTURE = readFileSync(
 
 let pool: Pool;
 beforeEach(async () => {
-  const mem = newDb();
-  const { Pool } = mem.adapters.createPg();
-  pool = new Pool();
-  await runMigrations(pool);
+  pool = await memPool();
 });
 
 function indexFetch() {

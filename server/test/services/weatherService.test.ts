@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { newDb } from 'pg-mem';
-import { runMigrations } from '../../src/db/index.js';
+import { memPool } from '../helpers/memPool.js';
 import { getWeather, mapOpenMeteo } from '../../src/services/weatherService.js';
 import type { Pool } from 'pg';
 
@@ -11,10 +10,7 @@ const OM = {
 
 let pool: Pool;
 beforeEach(async () => {
-  const mem = newDb();
-  const { Pool } = mem.adapters.createPg();
-  pool = new Pool();
-  await runMigrations(pool);
+  pool = await memPool();
 });
 
 describe('mapOpenMeteo', () => {

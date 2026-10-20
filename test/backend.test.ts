@@ -1,4 +1,8 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
+const mocks = vi.hoisted(() => ({ authedFetch: vi.fn() }));
+vi.mock('../src/services/api/authedFetch', () => ({ authedFetch: mocks.authedFetch }));
+
+
 import {
   getBackendLevel,
   getBackendNews,
@@ -266,40 +270,22 @@ describe('reference levels over the shared cache', () => {
 });
 
 describe('pingDevice', () => {
-  test('reports the device and the station it is looking at', async () => {
-    const fetchMock = vi.fn(async () => ({ ok: true, json: async () => ({}) }));
-    vi.stubGlobal('fetch', fetchMock);
+  test('reports the station it is looking at, as this device', async () => {
+    mocks.authedFetch.mockResolvedValue(new Response(null, { status: 204 }));
 
-    await pingDevice('11111111-1111-4111-8111-111111111111', 'rosario');
+    await pingDevice('rosario');
 
-    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
-    expect(url).toMatch(/\/devices\/ping$/);
-    expect(init.method).toBe('POST');
-    expect(JSON.parse(init.body as string)).toEqual({
-      deviceId: '11111111-1111-4111-8111-111111111111',
-      stationId: 'rosario',
-    });
+    expect(mocks.authedFetch).toHaveBeenCalledWith('/me/ping', { method: 'POST', body: { stationId: 'rosario' } });
   });
 
   test('omits the station when none is open', async () => {
-    const fetchMock = vi.fn(async () => ({ ok: true, json: async () => ({}) }));
-    vi.stubGlobal('fetch', fetchMock);
-
-    await pingDevice('11111111-1111-4111-8111-111111111111');
-
-    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
-    expect(JSON.parse(init.body as string)).toEqual({
-      deviceId: '11111111-1111-4111-8111-111111111111',
-    });
+    mocks.authedFetch.mockResolvedValue(new Response(null, { status: 204 }));
+    await pingDevice();
+    expect(mocks.authedFetch).toHaveBeenCalledWith('/me/ping', { method: 'POST', body: {} });
   });
 
   test('never throws, because telemetry must not break a screen', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => {
-      throw new Error('network down');
-    }));
-
-    await expect(
-      pingDevice('11111111-1111-4111-8111-111111111111', 'goya')
-    ).resolves.toBeUndefined();
+    mocks.authedFetch.mockRejectedValue(new Error('network down'));
+    await expect(pingDevice('goya')).resolves.toBeUndefined();
   });
 });

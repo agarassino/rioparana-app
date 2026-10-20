@@ -1,0 +1,17 @@
+# .maestro/feedback-reply.yaml
+# After the admin replied: open the push from the shade and read the reply.
+appId: com.syloper.rioparanaapp
+---
+- swipe:
+    start: "50%, 1%"
+    end: "50%, 70%"
+- extendedWaitUntil:
+    visible: "Tenés una respuesta a tu mensaje"
+    timeout: 120000
+- tapOn: "Tenés una respuesta a tu mensaje"
+
+- extendedWaitUntil:
+    visible: "e2e-reply ${MARKER}"
+    timeout: 30000
+- assertVisible: "Paraná Info"
+# The push itself never carried the reply text; it arrived from the API.

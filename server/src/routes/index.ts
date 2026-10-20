@@ -1,3 +1,6 @@
+import { withLegacyDevice } from '../stores/legacyDeviceStore.js';
+import { registerFeedbackRoutes } from './feedback.js';
+import { registerDeviceRoutes } from './devices.js';
 import { FastifyInstance } from 'fastify';
 import type { Pool } from 'pg';
 import { z } from 'zod';
@@ -18,6 +21,8 @@ export interface RouteDeps {
   weatherDeps?: { fetchFn?: typeof fetch };
   refreshFetch?: typeof fetch;
   refreshToken?: string;
+  legacyDeviceRoutes?: boolean;
+  now?: () => Date;
 }
 
 const weatherQuery = z.object({
@@ -52,6 +57,7 @@ const riverBatchBody = z.object({
 
 export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
   const { pool } = deps;
+  const legacy = deps.legacyDeviceRoutes ?? true;
 
   app.get('/river/:stationId', async (req, reply) => {
     const { stationId } = req.params as { stationId: string };
@@ -81,7 +87,8 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     return reply.code(204).send();
   });
 
-  app.post('/river', async (req, reply) => {
+  // The one legitimately large body: a phone pushing every station at once.
+  app.post('/river', { bodyLimit: 64 * 1024 }, async (req, reply) => {
     const parsed = riverBatchBody.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: 'invalid body' });
 
@@ -130,27 +137,34 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
   });
 
   app.post('/devices/ping', async (req, reply) => {
+    if (!legacy) return reply.code(410).send({ error: 'gone' });
     const parsed = pingBody.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: 'invalid body' });
-    await pingDevice(pool, parsed.data.deviceId, parsed.data.stationId);
+    const result = await withLegacyDevice(pool, parsed.data.deviceId, (client) => pingDevice(client, parsed.data.deviceId, parsed.data.stationId));
+    if (!result.allowed) return reply.code(401).send({ error: 'invalid_token' });
     return reply.code(204).send();
   });
 
   // Registering, replacing, or clearing a device's push token. Null turns
   // notifications off, which is the same row with the token gone.
   app.post('/devices/push-token', async (req, reply) => {
+    if (!legacy) return reply.code(410).send({ error: 'gone' });
     const parsed = pushTokenBody.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: 'invalid body' });
-    await savePushToken(pool, parsed.data.deviceId, parsed.data.pushToken);
+    const result = await withLegacyDevice(pool, parsed.data.deviceId, (client) => savePushToken(client, parsed.data.deviceId, parsed.data.pushToken));
+    if (!result.allowed) return reply.code(401).send({ error: 'invalid_token' });
     return reply.code(204).send();
   });
 
   // One device's own notification history. Behind the key: it is not public
   // information the way the river heights are.
   app.get('/notifications', async (req, reply) => {
+    if (!legacy) return reply.code(410).send({ error: 'gone' });
     const parsed = notificationsQuery.safeParse(req.query);
     if (!parsed.success) return reply.code(400).send({ error: 'deviceId required' });
-    return getNotifications(pool, parsed.data.deviceId);
+    const result = await withLegacyDevice(pool, parsed.data.deviceId, (client) => getNotifications(client, parsed.data.deviceId));
+    if (!result.allowed) return reply.code(401).send({ error: 'invalid_token' });
+    return result.value;
   });
 
   // Usage, not river data: this one stays behind the key.
@@ -171,4 +185,6 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     ]);
     return { river, news };
   });
+  registerDeviceRoutes(app, { pool });
+  registerFeedbackRoutes(app, { pool, now: deps.now });
 }

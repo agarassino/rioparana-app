@@ -67,7 +67,7 @@
 <body>
     <div class="container">
         <h1>Política de Privacidad</h1>
-        <p class="date">Última actualización: 15 de septiembre de 2026</p>
+        <p class="date">Última actualización: 13 de octubre de 2026</p>
 
         <p><strong>Río Paraná App</strong> ("nosotros", "la aplicación") se compromete a proteger la privacidad de nuestros usuarios. Esta política describe cómo recopilamos, usamos y protegemos su información.</p>
 
@@ -75,8 +75,9 @@
         <p>La aplicación puede recopilar la siguiente información:</p>
         <ul>
             <li><strong>Ubicación:</strong> Utilizamos su ubicación para mostrar la estación de monitoreo más cercana y el clima local. Esta información se procesa localmente y no se almacena en nuestros servidores.</li>
-            <li><strong>Identificador de dispositivo:</strong> Al abrir la aplicación se genera un identificador aleatorio que se guarda en el dispositivo y se envía a nuestro servidor junto con la estación que se está consultando. Sirve únicamente para contar cuántos dispositivos usan la aplicación y qué estaciones se consultan. No contiene datos personales, no permite identificar a la persona, y no se comparte con terceros.</li>
-            <li><strong>Notificaciones:</strong> Si acepta recibir notificaciones, el sistema operativo genera un identificador de envío (token) que se guarda en nuestro servidor junto al identificador del dispositivo. Se usa únicamente para enviarle una vez por día la altura del río en la estación que más consulta, y para que pueda ver en la aplicación las notificaciones anteriores. El token no contiene datos personales. Puede desactivar las notificaciones desde la configuración de su dispositivo en cualquier momento; al hacerlo, el token deja de utilizarse.</li>
+            <li><strong>Identificador de dispositivo:</strong> Al abrir la aplicación se genera un identificador aleatorio que se guarda en el dispositivo y se envía a nuestro servidor junto con la estación que se está consultando. Se utiliza para contar cuántos dispositivos usan la aplicación y qué estaciones se consultan, autenticar al dispositivo mediante una credencial y asociar sus conversaciones de contacto y sus notificaciones. El identificador es aleatorio y no incorpora nombre, correo ni teléfono. No se utiliza para identificar personalmente a quien usa la aplicación.</li>
+            <li><strong>Notificaciones:</strong> Si acepta recibir notificaciones, el sistema operativo genera un identificador de envío (token) que se guarda en nuestro servidor junto al identificador del dispositivo. Se usa para enviarle una vez por día la altura del río en la estación que más consulta y, si nos escribe desde la aplicación, avisarle cuando respondemos a sus mensajes de contacto. El aviso de respuesta no incluye el texto de la respuesta. También puede consultar en la aplicación el historial de notificaciones diarias del río. Estas notificaciones son opcionales. El token no contiene datos personales. Puede desactivar las notificaciones desde la configuración de su dispositivo en cualquier momento; al hacerlo, el token deja de utilizarse.</li>
+            <li><strong>Mensajes de contacto:</strong> Si nos escribe desde "Contacto y sugerencias", guardamos el texto que envía, el tipo de mensaje (sugerencia, error o consulta), la estación sobre la que escribe si la eligió, y la versión de la aplicación y del sistema operativo, asociados al identificador del dispositivo. No solicitamos nombre, correo ni teléfono como campos de contacto ni los recopilamos automáticamente; evite incluirlos en el mensaje. El texto que escriba voluntariamente se guarda como parte del mensaje. Usamos estos datos únicamente para leer y responder su mensaje dentro de la aplicación y para corregir errores.</li>
         </ul>
 
         <h2>2. Fuentes de Datos</h2>
@@ -93,11 +94,13 @@
             <li>Mostrar datos relevantes de nivel del río y clima según su ubicación</li>
             <li>Mejorar la experiencia del usuario</li>
             <li>Enviar la notificación diaria con la altura del río, si la solicitó</li>
+            <li>Leer y responder los mensajes que nos envía desde la aplicación</li>
             <li>Proporcionar soporte técnico</li>
         </ul>
 
         <h2>4. Almacenamiento de Datos</h2>
         <p>Los datos de nivel del río y clima se almacenan temporalmente en caché para mejorar el rendimiento y permitir el uso offline. Estos datos se actualizan periódicamente y no contienen información personal.</p>
+        <p>Los mensajes de contacto y sus respuestas se conservan durante 12 meses desde la última actividad de la conversación; pasado ese plazo se eliminan automáticamente.</p>
 
         <h2>5. Compartir Información</h2>
         <p>No vendemos, comercializamos ni transferimos su información personal a terceros. Podemos compartir información agregada y anónima con fines estadísticos.</p>
@@ -108,6 +111,7 @@
             <li><strong>api.rioparana.com.ar:</strong> Servidor propio que almacena en caché datos públicos de nivel del río, clima y noticias</li>
             <li><strong>Open-Meteo:</strong> Para datos meteorológicos</li>
             <li><strong>Expo:</strong> Para la distribución de la aplicación y para la entrega de las notificaciones. Expo actúa como medio de transporte del envío; no recibe información sobre la persona usuaria.</li>
+            <li><strong>Resend:</strong> Envía al responsable de la aplicación un aviso por correo cuando llega un mensaje nuevo. El aviso incluye el tipo de mensaje, la estación y un extracto de los primeros 140 caracteres del texto. El extracto puede contener información que usted escriba voluntariamente. Recomendamos no incluir datos personales sensibles. No se incluyen automáticamente el identificador del dispositivo, los tokens ni las versiones de la aplicación y del sistema operativo en este correo.</li>
         </ul>
         <p>El sitio web <strong>rioparana.com.ar</strong> —no la aplicación— utiliza además:</p>
         <ul>
@@ -124,6 +128,7 @@
             <li>Solicitar la eliminación de sus datos</li>
             <li>Revocar permisos de ubicación desde la configuración de su dispositivo</li>
             <li>Desactivar las notificaciones desde la configuración de su dispositivo</li>
+            <li>Pedir la eliminación de sus mensajes escribiéndonos desde "Contacto y sugerencias" en la aplicación</li>
         </ul>
 
         <h2>9. Menores de Edad</h2>

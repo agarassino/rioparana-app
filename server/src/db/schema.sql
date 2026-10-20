@@ -70,3 +70,61 @@ CREATE TABLE IF NOT EXISTS notifications (
 
 CREATE INDEX IF NOT EXISTS notifications_device_sent
   ON notifications (device_id, sent_at DESC);
+
+-- Per-device credential (2.2.0+). Only the SHA-256 of the token is kept, as
+-- lower-case hex: the token is 256 random bits, so a slow hash adds nothing,
+-- and pg-mem cannot round-trip bytea. NULLs do not collide in the index.
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS token_hash text;
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS token_issued_at timestamptz;
+CREATE UNIQUE INDEX IF NOT EXISTS devices_token_hash ON devices (token_hash);
+
+-- In-app feedback. A thread belongs to one device; its messages go with it.
+CREATE TABLE IF NOT EXISTS feedback_threads (
+  id            uuid PRIMARY KEY,
+  device_id     uuid NOT NULL REFERENCES devices (device_id),
+  kind          text NOT NULL CHECK (kind IN ('suggestion','bug','question')),
+  station_id    text NULL,
+  app_version   text NOT NULL,
+  os_version    text NOT NULL,
+  status        text NOT NULL CHECK (status IN ('open','answered','archived')),
+  unread_device boolean NOT NULL DEFAULT false,
+  created_at    timestamptz NOT NULL,
+  updated_at    timestamptz NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS feedback_threads_device
+  ON feedback_threads (device_id, updated_at DESC);
+
+-- char_length counts code points, so an emoji is one character here exactly
+-- as it is in the validation that runs before the insert.
+CREATE TABLE IF NOT EXISTS feedback_messages (
+  id         uuid PRIMARY KEY,
+  thread_id  uuid NOT NULL REFERENCES feedback_threads (id) ON DELETE CASCADE,
+  author     text NOT NULL CHECK (author IN ('device','admin')),
+  body       text NOT NULL CHECK (char_length(body) BETWEEN 1 AND 2000),
+  created_at timestamptz NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS feedback_messages_thread
+  ON feedback_messages (thread_id, created_at);
+
+-- Append-only record of what the owner did in the admin. No code path updates
+-- or deletes it; production also revokes those privileges (DEPLOY-COOLIFY.md).
+CREATE TABLE IF NOT EXISTS admin_audit (
+  id        bigserial PRIMARY KEY,
+  action    text NOT NULL,
+  thread_id uuid NULL,
+  at        timestamptz NOT NULL
+);
+
+-- Marks for periodic jobs, so a restart neither re-sends nor forgets.
+CREATE TABLE IF NOT EXISTS job_state (
+  name   text PRIMARY KEY,
+  mark   timestamptz NULL,
+  ran_at timestamptz NULL
+);
+
+-- Exact-message owner email acknowledgement: timestamps are not commit cursors.
+ALTER TABLE feedback_messages ADD COLUMN IF NOT EXISTS owner_emailed_at timestamptz;
+CREATE INDEX IF NOT EXISTS feedback_messages_owner_email
+  ON feedback_messages (author, owner_emailed_at);

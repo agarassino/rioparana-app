@@ -1,0 +1,38 @@
+# .maestro/feedback-send.yaml
+# Send a message from Perfil and land on its thread. MARKER makes the thread
+# findable from the admin and keeps runs apart.
+appId: com.syloper.rioparanaapp
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+
+- retry:
+    maxRetries: 3
+    commands:
+      - runFlow: dismiss-location.yaml
+      - extendedWaitUntil:
+          visible: "Estaciones"
+          timeout: 30000
+
+- assertNotVisible: "DEVELOPMENT SERVERS"
+
+- tapOn: "Perfil"
+- tapOn: "Contacto y sugerencias"
+- tapOn: "Consulta"
+- tapOn:
+    id: "feedback-input"
+- inputText: "e2e ${MARKER}"
+- hideKeyboard
+- tapOn:
+    id: "feedback-send"
+
+# The thread screen shows the message we just sent, signed as ours.
+- extendedWaitUntil:
+    visible: "e2e ${MARKER}"
+    timeout: 20000
+- assertVisible: "Vos"
+
+# Background the app so the reply push lands in the notification shade.
+- pressKey: Home

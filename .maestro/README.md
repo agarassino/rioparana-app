@@ -43,3 +43,17 @@ work for someone who says no.
 - The station list runs north to south down the river, so Rosario sits well
   below the fold. The flow scrolls to it, which also proves the list is
   complete and scrollable.
+
+## Feedback loop (release-only, owner approval required)
+
+`npm run e2e:feedback` sends a real message, logs into the admin, replies and
+archives the thread, then opens its reply push. It may send owner email and
+push notifications. It clears the installed app's data.
+
+Requires a 2.2.0+ release build, a booted Android device with Google Play services,
+verified backend rollout, and access to the explicitly approved admin origin.
+Only after owner approval, set `FEEDBACK_E2E_APPROVED=1`, `ADMIN_URL`, and
+`ADMIN_PASSWORD` locally (never commit them), then run the command. No admin
+production address is assumed. The password is not printed by the scripts.
+A successful run prints its marker; record evidence separately. This workflow
+is NOT a substitute for cold-start/offline real-device release checks.

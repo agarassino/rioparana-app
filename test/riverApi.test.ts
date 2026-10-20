@@ -1,3 +1,5 @@
+// Keep native credential storage outside the pure river-data test graph.
+vi.mock('../src/services/api/authedFetch', () => ({ authedFetch: vi.fn() }));
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
