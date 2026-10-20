@@ -110,3 +110,164 @@ deploy platform and must be solved separately. Options under consideration:
 
 Until this is resolved, a datacenter deploy serves working news + weather +
 device analytics, but river level will be empty.
+
+
+## 10. Feedback: owner email and the tailnet-only admin
+
+**Release status: local implementation only.** No DNS, Resend sends, secrets,
+role changes, deployments, port mappings, or external reachability checks were
+performed. Every operation below requires the owner's explicit approval. Do not
+release the app until the unchecked verification gates have evidence.
+
+### Environment variables (application → Environment Variables)
+
+| Variable | Value | Notes |
+|---|---|---|
+| `RESEND_API_KEY` | `re_…` (sending access, restricted to `rioparana.com.ar`) | Missing → owner email disabled, logged at startup |
+| `FEEDBACK_NOTIFY_EMAIL` | `garassino@gmail.com` | Default if unset |
+| `FEEDBACK_FROM_EMAIL` | `Paraná Info <avisos@rioparana.com.ar>` | Default if unset; domain must be verified in Resend |
+| `ADMIN_BASE_URL` | `http://100.89.213.31:3100` | Used for links in the email |
+| `ADMIN_PASSWORD_HASH` | output of the command below | Tick **Is Literal** — the hash contains `$`, which compose would interpolate. Missing/malformed → admin disabled, logged |
+| `ADMIN_PORT` | `3100` | Default if unset |
+| `ADMIN_SECURE_COOKIE` | `false` (`true` only with the Traefik fallback below) | |
+| `LOG_LEVEL` | `info` | |
+| `RUN_MIGRATIONS` | `false` for the restricted runtime | Default `true` preserves existing installs; run the separate migration job first |
+| `LEGACY_DEVICE_ROUTES` | `on` | `off` once `/stats` → `auth.shareOfActive` ≥ 0.9 |
+
+Generate the hash on your machine (the password is read from stdin, never from argv):
+
+```bash
+cd server && read -rs PW && printf '%s\n' "$PW" | npx tsx src/admin/hashPassword.ts; unset PW
+```
+
+### Resend domain (Cloudflare DNS)
+
+1. Resend → Domains → Add `rioparana.com.ar`, region `us-east-1`.
+2. Cloudflare → DNS for `rioparana.com.ar`: copy the exact DKIM, SPF and MX names/values currently issued by Resend for this domain/region. Do not invent or reuse records from another project. Confirm DNS-only where applicable and preserve any existing SPF/DMARC policy.
+3. Optional but recommended: TXT `_dmarc` → `v=DMARC1; p=none;`.
+4. Resend → Verify. Wait until DKIM and SPF are both "Verified".
+5. Resend → API Keys → create one with **Sending access** limited to `rioparana.com.ar`; put it in `RESEND_API_KEY`.
+6. Smoke test from your machine:
+   ```bash
+   curl -s https://api.resend.com/emails -H "Authorization: Bearer $RESEND_API_KEY" -H 'Content-Type: application/json' \
+     -d '{"from":"Paraná Info <avisos@rioparana.com.ar>","to":["garassino@gmail.com"],"subject":"Paraná Info: prueba","text":"ok"}'
+   ```
+   Expect `{"id":"…"}` and the email in the inbox (not spam).
+
+### Publishing port 3100 on the tailnet only
+
+The admin listens on `0.0.0.0:3100` **inside** the container. Who can reach it is decided by the Docker port mapping. Docker writes its own iptables rules and **bypasses ufw**, so a plain `3100:3100` mapping would be public (only the Hetzner Cloud Firewall would stand in the way). Bind the host side to the tailnet address instead:
+
+1. Application → Configuration → Network:
+   - **Ports Exposes:** `3000,3100`
+   - **Ports Mappings:** `100.89.213.31:3100:3100`
+2. Traefik keeps routing only the domain to port 3000; do not add any label or domain for 3100.
+3. Redeploy.
+
+### Verification checklist (all must hold before the app release)
+
+- [ ] On the host: `sudo ss -ltnp | rg 3100` shows `100.89.213.31:3100` and **not** `0.0.0.0:3100` or `[::]:3100`.
+- [ ] From a tailnet device: `curl -si http://100.89.213.31:3100/admin/login | head -1` → `HTTP/1.1 200 OK`; the login page renders in a browser and login works.
+- [ ] From a non-tailnet network (phone hotspot with Tailscale **off**): `curl -m 5 -si http://178.105.89.240:3100/admin/login` → times out / connection refused.
+- [ ] From the same non-tailnet network: `curl -si https://api.rioparana.com.ar/admin/login -H "x-api-key: $APP_API_KEY" | head -1` → `404`.
+- [ ] From the non-tailnet network: `nmap -Pn -p 3100 178.105.89.240` → `filtered` or `closed`.
+- [ ] Startup logs show `[admin] listening on 3100 (tailnet only)` and, if the key is set, no `owner email disabled` line.
+
+### Fallback if Coolify cannot bind a host IP: Traefik `ipAllowList`
+
+Only if the mapping above is rejected or `ss` shows `0.0.0.0:3100`. Remove the port mapping and add these **Container Labels** to the application:
+
+```
+traefik.http.routers.rp-admin.rule=Host(`api.rioparana.com.ar`) && PathPrefix(`/admin`)
+traefik.http.routers.rp-admin.entrypoints=https
+traefik.http.routers.rp-admin.tls=true
+traefik.http.routers.rp-admin.priority=100
+traefik.http.routers.rp-admin.service=rp-admin
+traefik.http.routers.rp-admin.middlewares=rp-admin-tailnet
+traefik.http.services.rp-admin.loadbalancer.server.port=3100
+traefik.http.middlewares.rp-admin-tailnet.ipallowlist.sourcerange=100.64.0.0/10
+```
+
+Do **not** set an `ipStrategy`: the allow-list must judge the TCP peer, never `X-Forwarded-For`, or anyone behind Cloudflare could claim a tailnet address. Set `ADMIN_SECURE_COOKIE=true` and `ADMIN_BASE_URL=https://api.rioparana.com.ar`. The owner reaches it over the tailnet by adding `100.89.213.31 api.rioparana.com.ar` to the laptop's hosts file. Verify: from the tailnet the login page loads over HTTPS; from a non-tailnet network `https://api.rioparana.com.ar/admin/login` → `403` (Traefik's answer; accepted for the fallback).
+
+### Audit table: insert and select only
+
+The spec wants the app role unable to change `admin_audit`. Check which role the app uses:
+
+```sql
+SELECT current_user, rolsuper FROM pg_roles WHERE rolname = current_user;
+```
+
+If `rolsuper` is true, grants cannot restrict it. A table owner can also bypass
+ordinary revocations. Do not claim append-only protection until the runtime
+role is neither superuser nor owner of `admin_audit`, cannot assume its owner's
+role, and has only `SELECT` and `INSERT` on that table (plus sequence usage).
+Use a generated secret; no password is supplied in this document.
+
+### Separate privileged migrations from restricted runtime
+
+The implementation now supports this separation; it was exercised on an owned,
+disposable real PostgreSQL cluster, not on the deployment database:
+
+1. Build once (`npm run build` in `server`). In an explicitly approved migration
+   job, supply its owner/migration-role `DATABASE_URL` through the secret store
+   and run `npm run migrate`. The job needs no `APP_API_KEY` and closes its pool.
+2. Give the runtime a different, nonowner/non-superuser `DATABASE_URL` and set
+   `RUN_MIGRATIONS=false`. Startup performs SELECT-only required-schema checks,
+   not CREATE/ALTER; missing feedback columns fail startup rather than serving
+   a partial schema. Keep migration credentials out of the runtime container.
+3. Grant the runtime DML on app tables, SELECT/INSERT only on `admin_audit`, and
+   required sequence usage. No schema CREATE, role membership in an owner, or
+   audit table ownership. Review actual inherited/default privileges separately.
+4. Repeat the migration job before each schema-changing deployment. Do not
+   switch the runtime flag on to bypass a failed migration or missing grant.
+
+The default remains `RUN_MIGRATIONS=true` for backwards compatibility; that is
+not append-only audit hardening. Production must explicitly adopt the separate
+job and restricted role after owner approval. No deployment roles or credentials
+were changed by local implementation/tests.
+
+- [ ] Owner approves the migration/runtime-role separation and credentials.
+- [ ] Deployed Postgres fresh/existing-schema migration verified with its actual migration role (disposable local PostgreSQL passed).
+- [ ] Deployed restricted runtime starts with `RUN_MIGRATIONS=false`, following its separate migration job (disposable local role test passed).
+- [ ] As the runtime role, SELECT/INSERT audit succeeds; UPDATE, DELETE and
+  TRUNCATE are denied. Confirm table ownership and inherited memberships too.
+- [ ] A container built from `server/Dockerfile` loads native argon2 and hashes
+  a disposable test password. This is not verified by the host-native tests.
+
+### Rollout gates (not executed)
+
+1. After review and explicit owner approval, deploy Phase 0 with legacy routes
+   still on; verify health, one-time registration, legacy compatibility and log
+   redaction. Do not push or deploy automatically.
+2. Configure verified Resend sender, private admin mapping, literal argon2 hash,
+   and the approved separate migration job and runtime role; obtain approval for Phase
+   1+2 deployment. Run every reachability check above from both networks.
+3. With approval, run the send → email → private admin reply → app thread
+   smoke test using dedicated test data. This sends real email/push; local
+   automated tests use injected transports instead.
+4. Release app 2.2.0 only after backend gates, privacy/Data Safety updates and
+   device E2E are verified. Publishing requires separate owner approval.
+5. Keep legacy routes on until `/stats` reports `auth.shareOfActive >= 0.9`
+   for seven consecutive days. Ask for approval before changing
+   `LEGACY_DEVICE_ROUTES=off` and redeploying; verify all three routes return 410.
+
+### Transition compatibility
+
+While `LEGACY_DEVICE_ROUTES=on`, old devices without a registered credential
+retain legacy ping, push-token and notification access. Once a device registers,
+all three legacy endpoints reject it with `401 {"error":"invalid_token"}` even
+if supplied with the bundle API key; upgraded clients must use `/me/*` with their
+Bearer. The registration and legacy guard share a database row-lock boundary,
+so a queued legacy write cannot override the upgrade after it commits. TOFU
+re-registration still returns 409; a lost-token reinstall uses a fresh device ID.
+
+### Durable owner-email acknowledgement
+
+`owner_emailed_at` acknowledges only exact device-message IDs selected for an
+accepted email, atomically with its debounce state. Equal-timestamp or older
+late commits stay pending. A failure before acceptance leaves all pending;
+a crash after external acceptance but before DB commit can resend (at-least-once),
+not silently skip. Existing timestamp marks are retained for diagnostics only,
+not used to discard unacknowledged messages. On an upgrade from timestamp-only
+code, previously sent unacknowledged messages may be announced once again.

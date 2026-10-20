@@ -14,6 +14,7 @@ ENV NODE_ENV=production
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=build /app/dist ./dist
-EXPOSE 3000
+# 3000 public API (Traefik); 3100 owner admin, published on the tailnet IP only
+EXPOSE 3000 3100
 USER node
 CMD ["node", "dist/index.js"]
