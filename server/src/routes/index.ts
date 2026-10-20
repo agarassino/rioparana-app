@@ -81,7 +81,8 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     return reply.code(204).send();
   });
 
-  app.post('/river', async (req, reply) => {
+  // The one legitimately large body: a phone pushing every station at once.
+  app.post('/river', { bodyLimit: 64 * 1024 }, async (req, reply) => {
     const parsed = riverBatchBody.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: 'invalid body' });
 
