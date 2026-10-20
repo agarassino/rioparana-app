@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { newDb } from 'pg-mem';
-import { runMigrations } from '../../src/db/index.js';
+import { memPool } from '../helpers/memPool.js';
 import { pingDevice } from '../../src/stores/deviceStore.js';
 import { getDeviceStats } from '../../src/stores/deviceStats.js';
 import { recordNotification, savePushToken } from '../../src/stores/pushStore.js';
@@ -15,10 +14,7 @@ const C = '33333333-3333-4333-8333-333333333333';
 
 let pool: Pool;
 beforeEach(async () => {
-  const mem = newDb();
-  const { Pool } = mem.adapters.createPg();
-  pool = new Pool();
-  await runMigrations(pool);
+  pool = await memPool();
 });
 
 describe('getDeviceStats', () => {

@@ -1,16 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { newDb } from 'pg-mem';
-import { runMigrations } from '../../src/db/index.js';
+import { memPool } from '../helpers/memPool.js';
 import { pingDevice } from '../../src/stores/deviceStore.js';
 import type { Pool } from 'pg';
 
 const DEV = '11111111-1111-1111-1111-111111111111';
 let pool: Pool;
 beforeEach(async () => {
-  const mem = newDb();
-  const { Pool } = mem.adapters.createPg();
-  pool = new Pool();
-  await runMigrations(pool);
+  pool = await memPool();
 });
 
 describe('pingDevice', () => {

@@ -1,15 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { newDb } from 'pg-mem';
-import { runMigrations } from '../../src/db/index.js';
+import { memPool } from '../helpers/memPool.js';
 import { upsertWaterLevel, getWaterLevel, getAllWaterLevels } from '../../src/stores/riverStore.js';
 import type { Pool } from 'pg';
 
 let pool: Pool;
 beforeEach(async () => {
-  const mem = newDb();
-  const { Pool } = mem.adapters.createPg();
-  pool = new Pool();
-  await runMigrations(pool);
+  pool = await memPool();
 });
 
 describe('riverStore', () => {
