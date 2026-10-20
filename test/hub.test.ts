@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-// @ts-expect-error plain .mjs without types
 import {
   hubAnswer, hubDescription, hubFaqHtml, hubFaqJsonLd, hubTable, pickHeadline, HUB_FAQ,
 } from '../landing/scripts/hub.mjs';
@@ -64,7 +63,7 @@ describe('hubAnswer', () => {
   // `n` stations with their own gauge, the first `withDelta` of them carrying
   // a delta from `deltaCm(i)` and the rest null, so tests can dial coverage
   // precisely.
-  function stationSet(n, withDelta, deltaCm) {
+  function stationSet(n: number, withDelta: number, deltaCm: (i: number) => number | null) {
     return Array.from({ length: n }, (_, i) =>
       reading({
         slug: `st-${i}`, nombre: `St ${i}`, level: 1,
@@ -119,7 +118,7 @@ describe('hubAnswer', () => {
   });
 
   it('treats a delta under 2cm either way as "se mantiene", not a move', () => {
-    const stable = stationSet(3, 3, (i) => [1, 0, -1][i]);
+    const stable = stationSet(3, 3, (i: number) => [1, 0, -1][i]);
     const text = hubAnswer([headlineOnly, ...stable]);
     expect(text).toContain('de 3 estaciones, 0 suben, 0 bajan y 3 se mantienen');
   });

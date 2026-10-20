@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest';
-// @ts-expect-error plain .mjs without types
 import {
   toPoints, readBakedLevel, readBakedDate, fallbackReading, buildOverrides, hubDailyDelta,
 } from '../scripts/refresh-river-landing.mjs';
-// @ts-expect-error plain .mjs without types
 import { indexPage } from '../landing/scripts/build-directory.mjs';
 
 const HOUR = 3_600_000;
