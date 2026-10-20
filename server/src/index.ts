@@ -12,6 +12,7 @@ async function main() {
     apiKey: env.apiKey,
     rateLimit: true,
     refreshToken: process.env.REFRESH_TOKEN,
+    logger: { level: env.logLevel },
   });
   await app.listen({ port: env.port, host: '0.0.0.0' });
   console.log(`[server] listening on ${env.port}`);

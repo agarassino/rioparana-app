@@ -4,7 +4,12 @@ import { loadEnv } from '../src/config/env.js';
 describe('loadEnv', () => {
   it('parses valid env', () => {
     const env = loadEnv({ PORT: '4000', DATABASE_URL: 'postgres://x', APP_API_KEY: 'secret' });
-    expect(env).toEqual({ port: 4000, databaseUrl: 'postgres://x', apiKey: 'secret' });
+    expect(env).toMatchObject({ port: 4000, databaseUrl: 'postgres://x', apiKey: 'secret' });
+  });
+
+  it('defaults the log level to info and treats empty strings as unset', () => {
+    const env = loadEnv({ DATABASE_URL: 'postgres://x', APP_API_KEY: 'secret', LOG_LEVEL: '' });
+    expect(env.logLevel).toBe('info');
   });
 
   it('defaults port to 3000', () => {
