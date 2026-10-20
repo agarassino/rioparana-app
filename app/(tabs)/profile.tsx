@@ -1,8 +1,10 @@
+import { useRouter } from 'expo-router';
 import { View, Text, StyleSheet, ScrollView, Pressable, Linking } from 'react-native';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { COLORS, BORDER_RADIUS, SPACING, FONT_SIZES } from '../../src/config/theme';
 
 export default function ProfileScreen() {
+  const router = useRouter();
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       <View style={styles.header}>
@@ -13,6 +15,9 @@ export default function ProfileScreen() {
         </Text>
       </View>
 
+      <Pressable accessibilityRole="button" onPress={() => router.push('/contacto')} style={{ backgroundColor: COLORS.white, padding: SPACING.lg, borderRadius: BORDER_RADIUS.lg }}>
+        <Text style={{ fontFamily: 'Nunito_600SemiBold', color: COLORS.earthDark }}>Contacto y sugerencias</Text>
+      </Pressable>
       <DataSourcesSection />
     </ScrollView>
   );

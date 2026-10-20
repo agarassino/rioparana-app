@@ -1,3 +1,4 @@
+import { FeedbackHomeCard } from '../../src/components/feedback/FeedbackHomeCard';
 import { View, Text, ScrollView, RefreshControl, StyleSheet, ActivityIndicator, Pressable, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState, useCallback } from 'react';
@@ -190,6 +191,7 @@ export default function HomeScreen() {
           </Pressable>
         )}
       </Card>
+        <FeedbackHomeCard />
       </ScrollView>
 
       {/* Boton Emergencia Prefectura - sticky en la parte inferior */}
