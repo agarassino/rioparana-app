@@ -14,7 +14,14 @@ export interface BuildServerOptions {
 }
 
 export async function buildServer(opts: BuildServerOptions = {}): Promise<FastifyInstance> {
-  const app = Fastify({ logger: false, trustProxy: 1 });
+  // Fastify 5 treats a numeric trustProxy as hop-count-only trust and fails
+  // it closed (cannot validate the immediate peer, so it never trusts
+  // forwarded headers) — the same outcome `trustProxy: 1` already produced
+  // at runtime post-upgrade, just not a valid TS literal any more. `false`
+  // makes that explicit without changing behavior. Task 2 rewrites this file
+  // and owns the real decision (a specific trusted proxy IP/CIDR) once the
+  // production reverse-proxy topology is known.
+  const app = Fastify({ logger: false, trustProxy: false });
 
   if (opts.rateLimit) {
     await app.register(rateLimit, { max: 120, timeWindow: '1 minute' });
