@@ -3,7 +3,6 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 
-import { getDeviceId } from '../services/deviceId';
 import { registerPushToken } from '../services/api/backend';
 import { resolvePushToken } from '../services/pushRegistration';
 
@@ -33,12 +32,10 @@ export function usePushRegistration(): void {
 
       if (cancelled) return;
 
-      const deviceId = await getDeviceId();
-      if (cancelled || !deviceId) return;
 
       // Sent even when the token is null: that is how a device that turned
       // notifications off stops being counted as reachable.
-      await registerPushToken(deviceId, token);
+      await registerPushToken(token);
     })();
 
     return () => {

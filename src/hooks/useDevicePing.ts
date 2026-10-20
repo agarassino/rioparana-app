@@ -1,6 +1,6 @@
+// src/hooks/useDevicePing.ts
 import { useEffect } from 'react';
 
-import { getDeviceId } from '../services/deviceId';
 import { pingDevice } from '../services/api/backend';
 
 /**
@@ -9,15 +9,6 @@ import { pingDevice } from '../services/api/backend';
  */
 export function useDevicePing(stationId?: string): void {
   useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      const deviceId = await getDeviceId();
-      if (!cancelled) await pingDevice(deviceId, stationId);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
+    void pingDevice(stationId);
   }, [stationId]);
 }
