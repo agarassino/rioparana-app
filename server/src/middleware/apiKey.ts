@@ -18,7 +18,7 @@ export function apiKeyGuard(expectedKey: string) {
     const provided = request.headers['x-api-key'];
     const key = Array.isArray(provided) ? provided[0] : provided;
     if (!key || !safeEqual(key, expectedKey)) {
-      reply.code(401).send({ error: 'unauthorized' });
+      return reply.code(401).send({ error: 'unauthorized' });
     }
   };
 }
