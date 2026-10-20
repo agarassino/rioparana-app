@@ -1,3 +1,4 @@
+import { StationReportLink } from '../../src/components/feedback/StationReportLink';
 import {
   View, Text, ScrollView, StyleSheet, ActivityIndicator, Pressable, Share,
 } from 'react-native';
@@ -161,6 +162,7 @@ export default function StationDetailScreen() {
         {/* Renders nothing at all until there are two readings to join, so a
             station with no history yet looks as it did before this existed. */}
         <RiverTrend stationId={station.id} />
+          <StationReportLink stationId={station.id} />
 
         {/* Clima */}
         <Card>
