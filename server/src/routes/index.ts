@@ -1,4 +1,5 @@
 import { withLegacyDevice } from '../stores/legacyDeviceStore.js';
+import { registerFeedbackRoutes } from './feedback.js';
 import { registerDeviceRoutes } from './devices.js';
 import { FastifyInstance } from 'fastify';
 import type { Pool } from 'pg';
@@ -21,6 +22,7 @@ export interface RouteDeps {
   refreshFetch?: typeof fetch;
   refreshToken?: string;
   legacyDeviceRoutes?: boolean;
+  now?: () => Date;
 }
 
 const weatherQuery = z.object({
@@ -184,4 +186,5 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     return { river, news };
   });
   registerDeviceRoutes(app, { pool });
+  registerFeedbackRoutes(app, { pool, now: deps.now });
 }
