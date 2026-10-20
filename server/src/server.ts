@@ -14,6 +14,7 @@ export interface BuildServerOptions {
   refreshFetch?: typeof fetch;
   refreshToken?: string;
   legacyDeviceRoutes?: boolean;
+  now?: () => Date;
   rateLimit?: boolean;
   /** Omitted in tests: the suite stays quiet unless a test captures logs. */
   logger?: LoggerConfig;
@@ -75,6 +76,7 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<Fastif
       refreshFetch: opts.refreshFetch,
       refreshToken: opts.refreshToken,
       legacyDeviceRoutes: opts.legacyDeviceRoutes,
+      now: opts.now,
     });
 
   return app;
