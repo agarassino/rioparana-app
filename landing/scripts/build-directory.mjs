@@ -737,7 +737,7 @@ async function main() {
     if (existsSync(join(ROOT, dir))) rmSync(join(ROOT, dir), { recursive: true });
   }
 
-  const urls = [`${SITE}/`, `${SITE}/rio/`];
+  const urls = [`${SITE}/`, `${SITE}/rio/`, `${SITE}/el-nino-y-el-parana/`];
   write('rio/index.html', indexPage());
 
   for (const loc of published) {

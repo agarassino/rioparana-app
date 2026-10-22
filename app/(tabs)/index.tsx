@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { useState, useCallback } from 'react';
 import { FontAwesome6 } from '@expo/vector-icons';
 
+import guide from '../../content/guides/el-nino.json';
 import { Card, Badge, NewsCard } from '../../src/components/ui';
 import { RiverAlert } from '../../src/components/RiverAlert';
 import { useLocation, useWaterLevel, useWeather, useNews, useDevicePing } from '../../src/hooks';
@@ -160,6 +161,16 @@ export default function HomeScreen() {
           </ScrollView>
         </Card>
       )}
+
+      <Card>
+        <Text style={styles.sectionTitle}>Conocer el río · {guide.readingTime}</Text>
+        <Text style={styles.stationName}>{guide.title}</Text>
+        <Text style={styles.stationProvince}>{guide.description}</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel={`Leer guía: ${guide.title}`}
+          style={styles.moreNewsButton} onPress={() => router.push('/el-nino-y-el-parana')}>
+          <Text style={styles.moreNewsText}>Leer guía</Text>
+        </Pressable>
+      </Card>
 
       {/* Noticias Prefectura Naval */}
       <Card>
