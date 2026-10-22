@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-// @ts-expect-error plain .mjs without types
 import { riverTitle, hubTitle } from '../landing/scripts/title.mjs';
 
 describe('riverTitle', () => {

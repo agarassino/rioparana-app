@@ -1,0 +1,36 @@
+{
+  "title": "El Niño y el Paraná",
+  "readingTime": "2 minutos de lectura",
+  "description": "Contexto para entender el río, no un pronóstico de su altura.",
+  "reviewedAt": "2026-10-22",
+  "sections": [
+    {
+      "title": "Qué es El Niño",
+      "body": "El Niño es un calentamiento de las aguas superficiales del Pacífico ecuatorial central y oriental. Aunque ocurre lejos del Paraná, puede modificar la circulación de la atmósfera y la distribución de las lluvias en distintas regiones. Estas conexiones expresan probabilidades, no resultados seguros para cada lugar."
+    },
+    {
+      "title": "Qué relación tiene con el río",
+      "body": "Las lluvias sobre la cuenca pueden influir en el agua que llega al Paraná. La altura también depende de los caudales aguas arriba, la humedad del suelo, el funcionamiento de los embalses y el tiempo que tarda el agua en desplazarse. Por eso, no alcanza con mirar el tiempo local ni una condición del Pacífico para describir una estación."
+    },
+    {
+      "title": "Qué no se puede predecir",
+      "body": "El Niño por sí solo no garantiza una creciente ni permite calcular una altura o una fecha. Para entender qué está pasando hacen falta mediciones recientes; para evaluar lo que podría pasar, pronósticos hidrológicos con su fecha y alcance. Una explicación climática general no sustituye ese seguimiento."
+    },
+    {
+      "title": "Dónde consultar datos",
+      "body": "La altura observada informa lo que se midió en una estación y un momento concretos. Un pronóstico estima una evolución posible, con incertidumbre. Una alerta oficial comunica una situación que requiere atención y puede incluir indicaciones de las autoridades: no es lo mismo que una medición o un pronóstico. Consultá el seguimiento del INA y los avisos de los organismos locales antes de tomar decisiones. Revisá siempre la fecha, la estación y el alcance de cada informe."
+    }
+  ],
+  "notice": "Esta guía es informativa y no reemplaza alertas ni indicaciones oficiales.",
+  "heightLabel": "Consultar alturas actuales",
+  "sources": [
+    {
+      "label": "NOAA: entender El Niño",
+      "url": "https://www.noaa.gov/understanding-el-nino"
+    },
+    {
+      "label": "INA: seguimiento hidrológico",
+      "url": "https://alerta.ina.gob.ar/a5/diario/reporte_diario"
+    }
+  ]
+}

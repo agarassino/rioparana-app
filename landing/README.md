@@ -80,3 +80,11 @@ sitio caído.
 
 Conviene correrlo antes de regenerar. Ante un enlace caído, reintentar más tarde
 antes de dar de baja la ficha: una caída puede ser pasajera.
+
+## El Niño guide
+
+Edit `content/guides/el-nino.json` (the native offline and web editorial source),
+review official sources and update its ISO review date. Run `npm run guide:build`
+from the repository root, then `npm run guide:check` and `npm run verify`.
+Commit the generated `landing/el-nino-y-el-parana/index.html` with its source.
+The guide check never repairs stale output; Docker copies the public directory.
