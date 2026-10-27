@@ -29,14 +29,15 @@ const weatherQuery = z.object({
   lat: z.coerce.number().finite().min(-90).max(90),
   lon: z.coerce.number().finite().min(-180).max(180),
 });
-const pingBody = z.object({ deviceId: z.string().uuid(), stationId: z.string().optional() });
+// Preserve the legacy hexadecimal UUID shape; RFC variant bits were never required.
+const pingBody = z.object({ deviceId: z.guid(), stationId: z.string().optional() });
 // Expo issues tokens in exactly this shape. Anything else can never be
 // delivered, so it is rejected rather than stored and paid for on every run.
 const pushTokenBody = z.object({
-  deviceId: z.string().uuid(),
+  deviceId: z.guid(),
   pushToken: z.string().regex(/^ExponentPushToken\[[^\]]+\]$/).nullable(),
 });
-const notificationsQuery = z.object({ deviceId: z.string().uuid() });
+const notificationsQuery = z.object({ deviceId: z.guid() });
 // Crowd-sourced river level pushed by phones inside Argentina (the only place
 // PNA is reachable). The datacenter cannot scrape PNA itself, so clients ingest.
 const riverIngestBody = z.object({
