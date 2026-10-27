@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { renderAsync, screen, fireEvent } from '@testing-library/react-native';
 import { RiverTrend } from '../src/components/RiverTrend';
 
 // The history hook is the one thing stubbed here: the component's job is to
@@ -26,7 +26,7 @@ afterEach(() => {
 
 const withHistory = (rows: unknown[]) => {
   mockHistory.mockReturnValue({ data: rows });
-  return render(<RiverTrend stationId="rosario" />);
+  return renderAsync(<RiverTrend stationId="rosario" />);
 };
 
 /** The card measures itself before drawing; nothing fires layout in a test. */
@@ -38,72 +38,72 @@ function giveItAWidth(width = 320) {
 }
 
 describe('RiverTrend', () => {
-  test('renders nothing at all while the API has no history', () => {
+  test('renders nothing at all while the API has no history', async () => {
     // This is the state on a station's first day. An empty card with a heading
     // in it is worse than no card.
-    withHistory([]);
+    await withHistory([]);
 
     expect(screen.toJSON()).toBeNull();
   });
 
-  test('renders nothing on a single reading', () => {
+  test('renders nothing on a single reading', async () => {
     // One point is not a trend.
-    withHistory([hoursAgo(2, 3)]);
+    await withHistory([hoursAgo(2, 3)]);
 
     expect(screen.toJSON()).toBeNull();
   });
 
-  test('appears once there are two readings to join', () => {
-    withHistory([hoursAgo(26, 3), hoursAgo(2, 3.1)]);
+  test('appears once there are two readings to join', async () => {
+    await withHistory([hoursAgo(26, 3), hoursAgo(2, 3.1)]);
 
     expect(screen.getByText('Cómo viene el río')).toBeTruthy();
   });
 
-  test('leads with what the river did since yesterday', () => {
-    withHistory([hoursAgo(26, 3), hoursAgo(2, 3.1)]);
+  test('leads with what the river did since yesterday', async () => {
+    await withHistory([hoursAgo(26, 3), hoursAgo(2, 3.1)]);
 
     expect(screen.getByText('Subió 10 cm')).toBeTruthy();
     expect(screen.getByText('en las últimas 24 h')).toBeTruthy();
   });
 
-  test('points down when the river dropped', () => {
-    withHistory([hoursAgo(26, 3.3), hoursAgo(2, 3.18)]);
+  test('points down when the river dropped', async () => {
+    await withHistory([hoursAgo(26, 3.3), hoursAgo(2, 3.18)]);
 
     expect(screen.getByText('Bajó 12 cm')).toBeTruthy();
   });
 
-  test('summarises the week under the badge', () => {
-    withHistory([hoursAgo(72, 3), hoursAgo(26, 3.05), hoursAgo(2, 3.12)]);
+  test('summarises the week under the badge', async () => {
+    await withHistory([hoursAgo(72, 3), hoursAgo(26, 3.05), hoursAgo(2, 3.12)]);
 
     expect(screen.getByText('Subió 12 cm en 3 días')).toBeTruthy();
   });
 
-  test('labels the scale with both extremes and the count', () => {
-    withHistory([hoursAgo(26, 2.95), hoursAgo(2, 3.28)]);
+  test('labels the scale with both extremes and the count', async () => {
+    await withHistory([hoursAgo(26, 2.95), hoursAgo(2, 3.28)]);
 
     expect(screen.getByText(/Mínima 2\.95 m · máxima 3\.28 m · 2 mediciones/)).toBeTruthy();
   });
 
-  test('still draws the week when the day cannot be answered', () => {
+  test('still draws the week when the day cannot be answered', async () => {
     // Readings four and five days old: the curve is honest, "since yesterday"
     // is not. The badge goes, the card stays.
-    withHistory([hoursAgo(120, 2.9), hoursAgo(96, 3.1)]);
+    await withHistory([hoursAgo(120, 2.9), hoursAgo(96, 3.1)]);
 
     expect(screen.getByText('Cómo viene el río')).toBeTruthy();
     expect(screen.queryByText(/últimas \d+ h/)).toBeNull();
   });
 
-  test('draws no curve until it knows how wide it is', () => {
+  test('draws no curve until it knows how wide it is', async () => {
     // The first pass has no measured width. The card is already useful without
     // the curve, so the badge and the sentence must not wait for it.
-    withHistory([hoursAgo(26, 3), hoursAgo(2, 3.1)]);
+    await withHistory([hoursAgo(26, 3), hoursAgo(2, 3.1)]);
 
     expect(screen.UNSAFE_queryByType('RNSVGSvgView' as never)).toBeNull();
     expect(screen.getByText('Subió 10 cm')).toBeTruthy();
   });
 
-  test('draws the curve once it has been measured', () => {
-    withHistory([hoursAgo(26, 3), hoursAgo(2, 3.1)]);
+  test('draws the curve once it has been measured', async () => {
+    await withHistory([hoursAgo(26, 3), hoursAgo(2, 3.1)]);
     giveItAWidth(320);
 
     const svg = screen.UNSAFE_root.findAll(
@@ -112,10 +112,10 @@ describe('RiverTrend', () => {
     expect(svg.length).toBeGreaterThan(0);
   });
 
-  test('ignores readings older than the window it claims to show', () => {
+  test('ignores readings older than the window it claims to show', async () => {
     // A reading from three weeks ago must not stretch the axis, or the week
     // the card is titled after gets squashed into the right-hand edge.
-    withHistory([hoursAgo(24 * 20, 1), hoursAgo(26, 3), hoursAgo(2, 3.1)]);
+    await withHistory([hoursAgo(24 * 20, 1), hoursAgo(26, 3), hoursAgo(2, 3.1)]);
 
     expect(screen.getByText(/Mínima 3\.00 m · máxima 3\.10 m · 2 mediciones/)).toBeTruthy();
   });
