@@ -71,3 +71,33 @@ describe('POST /devices/register', () => {
     await a.close();
   });
 });
+
+
+describe('device identifier migration compatibility', () => {
+  it('keeps hexadecimal legacy UUID shapes usable before token registration', async () => {
+    const a = await app();
+    const deviceId = '11111111-1111-1111-1111-111111111111';
+    try {
+      const ping = await a.inject({ method: 'POST', url: '/devices/ping', headers: H, payload: { deviceId } });
+      expect(ping.statusCode).toBe(204);
+      const push = await a.inject({ method: 'POST', url: '/devices/push-token', headers: H, payload: { deviceId, pushToken: null } });
+      expect(push.statusCode).toBe(204);
+      const notifications = await a.inject({ method: 'GET', url: `/notifications?deviceId=${deviceId}`, headers: H });
+      expect(notifications.statusCode).toBe(200);
+      expect(notifications.json()).toEqual([]);
+      expect((await register(a, deviceId)).statusCode).toBe(201);
+    } finally { await a.close(); }
+  });
+
+  it.each(['not-an-id', 'gggggggg-1111-4111-8111-111111111111', '11111111111141118111111111111111'])(
+    'rejects malformed identifier %s without echoing it', async (deviceId) => {
+      const a = await app();
+      try {
+        const res = await register(a, deviceId);
+        expect(res.statusCode).toBe(400);
+        expect(res.json()).toEqual({ error: 'invalid', field: 'deviceId' });
+        expect(res.body).not.toContain(deviceId);
+      } finally { await a.close(); }
+    },
+  );
+});

@@ -26,7 +26,8 @@ export function deviceRateKey(req: FastifyRequest): string {
 
 export const DEVICE_WRITE_LIMIT = { max: 60, timeWindow: '1 minute', keyGenerator: deviceRateKey };
 
-const registerBody = z.object({ deviceId: z.string().uuid() });
+// Match IDs accepted by older clients without imposing new RFC variant-bit rules.
+const registerBody = z.object({ deviceId: z.guid() });
 
 export function registerDeviceRoutes(app: FastifyInstance, deps: DeviceRouteDeps): void {
   const { pool } = deps;

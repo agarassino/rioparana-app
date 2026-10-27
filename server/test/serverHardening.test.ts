@@ -93,3 +93,34 @@ describe('body limit', () => {
     await app.close();
   });
 });
+
+
+describe('bounded collection validation', () => {
+  it('rejects 201 river readings before traversing their fields', async () => {
+    const pool = await memPool();
+    const app = await buildServer({ pool, apiKey: KEY });
+    let fieldReads = 0;
+    // Instrument the parsed request boundary without constructing a huge payload.
+    app.addHook('preValidation', async (req) => {
+      if (req.url !== '/river') return;
+      const body = req.body as { readings: Record<string, unknown>[] };
+      for (const reading of body.readings) {
+        Object.defineProperty(reading, 'stationId', {
+          enumerable: true,
+          get() { fieldReads++; return 'PRIVATE_STATION_VALUE'; },
+        });
+      }
+    });
+    try {
+      const res = await app.inject({
+        method: 'POST', url: '/river', headers: H,
+        payload: { readings: Array.from({ length: 201 }, () => ({})) },
+      });
+      expect(res.statusCode).toBe(400);
+      expect(res.json()).toEqual({ error: 'invalid body' });
+      expect(res.body).not.toContain('PRIVATE_STATION_VALUE');
+      expect(fieldReads).toBe(0);
+      expect((await pool.query('SELECT * FROM water_levels')).rows).toEqual([]);
+    } finally { await app.close(); }
+  });
+});
