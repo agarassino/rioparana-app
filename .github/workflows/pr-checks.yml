@@ -1,0 +1,66 @@
+name: PR checks
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: pr-checks-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  app:
+    name: App (tests, typecheck, export)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - name: Logic tests (vitest)
+        run: npm run test:logic
+      - name: Component tests (jest)
+        run: npm run test:components
+      - name: Typecheck
+        run: npm run typecheck
+      # The offline JS/Hermes export catches bundling problems that tests miss.
+      - name: Android export
+        run: npx expo export --platform android
+
+  server:
+    name: Server (tests, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      # The real-PostgreSQL tests (test/feedbackConcurrency.test.ts) do not read
+      # a DATABASE_URL or use a service container: they spawn a throwaway
+      # cluster with initdb/pg_ctl from PATH, and skip themselves when those
+      # binaries are missing. The runner image ships PostgreSQL binaries outside
+      # PATH, so expose them here and fail loudly instead of skipping silently.
+      - name: Expose PostgreSQL binaries
+        run: |
+          pg_bin="$(printf '%s\n' /usr/lib/postgresql/*/bin | sort -V | tail -n 1)"
+          echo "$pg_bin" >> "$GITHUB_PATH"
+          "$pg_bin/initdb" --version
+          "$pg_bin/pg_ctl" --version
+      - run: npm ci
+      - name: Tests (including real PostgreSQL)
+        run: npm test
+      - name: Build
+        run: npm run build
