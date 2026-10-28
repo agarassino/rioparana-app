@@ -20,7 +20,7 @@ const STATUS_LABELS: Record<ThreadStatus, string> = { open: 'Sin responder', ans
 
 const AR_TIME = new Intl.DateTimeFormat('es-AR', {
   timeZone: 'America/Argentina/Buenos_Aires',
-  day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false,
+  day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
 });
 
 export function formatArDate(iso: string): string {
